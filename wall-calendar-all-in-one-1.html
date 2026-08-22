@@ -140,6 +140,57 @@ function importData(file){if(!file)return;let r=new FileReader();r.onload=()=>{t
 function unlockCalendar(){let pin=document.getElementById("pinInput").value;if(pin===PIN){document.getElementById("pinLock").style.display="none";document.getElementById("pinInput").value="";document.getElementById("pinError").textContent=""}else{document.getElementById("pinError").textContent="Invalid PIN"}}
 function renderAll(){renderLists();renderMeals();renderCalendar();renderPhotos();notes()}
 clock();setInterval(clock,1000);renderAll();loadWeather();
-</script>
+// Sunrise and sunset
+const sunBox = document.createElement("div");
+sunBox.id = "sunBox";
+sunBox.style.cssText =
+"display:flex;gap:14px;margin:0 22px 10px;";
+
+ sunBox.innerHTML = `
+<div style="flex:1;background:#10202e;border:1px solid #30495b;border-radius:15px;padding:12px 16px;font-size:18px;">
+🌅 Sunrise
+<b id="sunrise" style="display:block;font-size:25px;margin-top:4px;">Loading...</b>
+</div>
+<div style="flex:1;background:#10202e;border:1px solid #30495b;border-radius:15px;padding:12px 16px;font-size:18px;">
+🌇 Sunset
+<b id="sunset" style="display:block;font-size:25px;margin-top:4px;">Loading...</b>
+</div>`;
+
+document.querySelector("main").before(sunBox);
+
+async function loadSunTimes(){
+  try{
+    const url =
+      "https://api.open-meteo.com/v1/forecast?latitude=-31.9523&longitude=115.8613&daily=sunrise,sunset&timezone=Australia%2FPerth";
+
+    const r = await fetch(url);
+    const j = await r.json();
+
+    const today = new Date().toLocaleDateString("en-CA", {
+      timeZone:"Australia/Perth"
+    });
+
+    const i = j.daily.time.indexOf(today);
+
+    const format = t =>
+      new Date(t).toLocaleTimeString("en-AU", {
+        hour:"numeric",
+        minute:"2-digit"
+      });
+
+    document.getElementById("sunrise").textContent =
+      format(j.daily.sunrise[i]);
+
+    document.getElementById("sunset").textContent =
+      format(j.daily.sunset[i]);
+
+  }catch(e){
+    document.getElementById("sunrise").textContent = "Unavailable";
+    document.getElementById("sunset").textContent = "Unavailable";
+  }
+}
+
+loadSunTimes();
+setInterval(loadSunTimes,3600000);
 </body>
 </html>
