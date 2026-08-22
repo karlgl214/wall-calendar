@@ -30,7 +30,7 @@ button.primary{background:#7650d6;border-color:#9b6cff}.add{float:right}.list{li
 .small{font-size:13px}.weather{font-size:50px;font-weight:700}.forecast{display:flex;justify-content:space-between;margin-top:18px;color:var(--muted)}
 .forecast b{display:block;color:#fff;margin-top:6px}
 .page{display:none;grid-column:1/-1}.page.active{display:block}.page h2{font-size:28px}
-.bottom{position:fixed;z-index:30;bottom:0;left:0;right:0;background:#091621;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(8,1fr);gap:3px;padding:6px 8px env(safe-area-inset-bottom);overflow-x:auto}
+.bottom{position:fixed;z-index:30;bottom:0;left:0;right:0;background:#091621;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(8,1fr);gap:3px;padding:6px 8px env(safe-area-inset-bottom)}
 .bottom button{border:0;background:transparent;padding:10px 3px;font-size:13px}.bottom button.active{background:#7650d6}
 .calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.calendar-head button{padding:8px 13px}
 .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.dow{text-align:center;color:var(--muted);font-weight:bold;padding:5px}
@@ -42,8 +42,9 @@ button.primary{background:#7650d6;border-color:#9b6cff}.add{float:right}.list{li
 .modal{position:fixed;z-index:80;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:18px}.modal.show{display:flex}
 .modalbox{background:#10202e;border:1px solid #4b6275;border-radius:17px;padding:20px;width:min(520px,100%);max-height:90vh;overflow:auto}.modalbox h3{margin-top:0}
 .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}.danger{background:#4a1f2b;border-color:#8b4057}
+.pin-lock{position:fixed;inset:0;z-index:9999;background:#091621;display:flex;align-items:center;justify-content:center;padding:20px}.pin-box{width:min(420px,90vw);background:#10202e;border:1px solid #4b6275;border-radius:20px;padding:30px;text-align:center}.pin-box h1{font-size:30px;margin-bottom:10px}.pin-box p{color:#aebbc7;margin-bottom:20px}.pin-input{width:100%;font-size:32px;text-align:center;letter-spacing:12px;padding:15px;border-radius:10px;border:1px solid #4b6275;background:#091621;color:#fff}.pin-unlock{margin-top:15px;width:100%;font-size:20px;padding:14px}.pin-error{color:#ff7070;margin-top:12px;min-height:24px}
 @media(max-width:900px){main{grid-template-columns:1fr 1fr}}
-@media(max-width:620px){header{padding:14px}main{grid-template-columns:1fr;padding:8px 12px 105px}.clock{font-size:31px}.bottom{font-size:10px}.bottom button{font-size:10px;padding:9px 1px}.calendar-grid{gap:2px}.day{min-height:60px;padding:3px;font-size:13px}}
+@media(max-width:620px){header{padding:14px}main{grid-template-columns:1fr;padding:8px 12px 105px}.clock{font-size:31px}.bottom{font-size:10px}.bottom button{font-size:10px;padding:9px 1px}.calendar-grid{gap:3px}.day{min-height:60px;font-size:13px}}
 </style>
 </head>
 <body>
@@ -59,7 +60,7 @@ button.primary{background:#7650d6;border-color:#9b6cff}.add{float:right}.list{li
 <section class="card"><h2>📝 NOTES</h2><textarea id="notesHome" placeholder="Write a note…"></textarea></section>
 <section class="card"><h2>📱 QUICK STATS</h2><div class="row"><span>Tasks left</span><b class="stat" id="taskCount">0</b></div><div class="row"><span>Shopping items</span><b class="stat" id="shopCount">0</b></div></section>
 
-<section id="calendar" class="page card"><div class="calendar-head"><h2 class="purple">📅 Calendar</h2><div><button onclick="changeMonth(-1)">‹</button><button onclick="changeMonth(1)">›</button></div></div><h3 id="monthTitle"></h3><div class="calendar-grid" id="calendar"></div></section>
+<section id="calendar" class="page card"><div class="calendar-head"><h2 class="purple">📅 Calendar</h2><div><button onclick="changeMonth(-1)">‹</button><button id="monthTitle">Jan</button><button onclick="changeMonth(1)">›</button></div></div><div class="calendar-grid" id="calendarGrid"></div></section>
 
 <section id="todo" class="page card"><h2 class="green">✅ To Do</h2><div class="inline"><input id="todoPage" type="text" placeholder="Add a task"><button onclick="addTodo('todoPage')">Add</button></div><ul id="todoPageList" class="list"></ul></section>
 
@@ -85,11 +86,13 @@ button.primary{background:#7650d6;border-color:#9b6cff}.add{float:right}.list{li
 </main>
 
 <nav class="bottom">
-<button class="active" onclick="goHome(this)">🏠<br>Home</button><button onclick="showPage('calendar',this)">📅<br>Calendar</button><button onclick="showPage('todo',this)">✅<br>To Do</button><button onclick="showPage('shopping',this)">🛒<br>Shopping</button><button onclick="showPage('meals',this)">🍽️<br>Meals</button><button onclick="showPage('weather',this)">☀️<br>Weather</button><button onclick="showPage('photos',this)">📸<br>Photos</button><button onclick="showPage('settings',this)">⚙️<br>Settings</button>
+<button class="active" onclick="goHome(this)">🏠<br>Home</button><button onclick="showPage('calendar',this)">📅<br>Calendar</button><button onclick="showPage('todo',this)">✅<br>To Do</button><button onclick="showPage('shopping',this)">🛒<br>Shop</button><button onclick="showPage('meals',this)">🍽️<br>Meals</button><button onclick="showPage('weather',this)">☀️<br>Weather</button><button onclick="showPage('photos',this)">📸<br>Photos</button><button onclick="showPage('settings',this)">⚙️<br>Settings</button>
 </nav>
 <div id="toast" class="toast"></div>
 
 <div id="eventModal" class="modal"><div class="modalbox"><h3>Add calendar event</h3><input id="eventTitle" type="text" placeholder="Event name"><br><br><input id="eventDate" type="date"><br><br><input id="eventTime" type="time"><br><br><div class="actions"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="saveEvent()">Save</button></div></div></div>
+
+<div id="pinLock" class="pin-lock" style="display:none"><div class="pin-box"><h1>🔒 PIN Lock</h1><p>Enter your PIN to unlock</p><input id="pinInput" class="pin-input" type="password" placeholder="----" maxlength="4" inputmode="numeric"><div class="pin-error" id="pinError"></div><button class="pin-unlock primary" onclick="checkPin()">Unlock</button></div></div>
 
 <script>
 const KEY="wallCalendarAllInOneV1";
@@ -103,7 +106,7 @@ let viewDate=new Date();
 function save(){localStorage.setItem(KEY,JSON.stringify(data));renderAll()}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function toast(t){let e=document.getElementById("toast");e.textContent=t;e.style.display="block";clearTimeout(window.tt);window.tt=setTimeout(()=>e.style.display="none",1800)}
-function clock(){let d=new Date();document.getElementById("clock").textContent=d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});document.getElementById("date").textContent=d.toLocaleDateString([],{weekday:"long",month:"short",day:"numeric"})}
+function clock(){let d=new Date();document.getElementById("clock").textContent=d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});document.getElementById("date").textContent=d.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"})}
 function listHTML(type){return data[type].map((x,i)=>`<li><label><input class="check" type="checkbox" ${x.done?"checked":""} onchange="toggle('${type}',${i})"> <span class="${x.done?"done":""}">
 ${esc(x.text)}</span></label><button onclick="removeItem('${type}',${i})">✕</button></label></li>`).join("")}
 function renderLists(){["todoHomeList","todoPageList"].forEach(id=>{let e=document.getElementById(id);if(e)e.innerHTML=listHTML("todo")});["shopHomeList","shopPageList"].forEach(id=>{let e=document.getElementById(id);if(e)e.innerHTML=listHTML("shopping")});document.getElementById("taskCount").textContent=data.todo.filter(x=>!x.done).length;document.getElementById("shopCount").textContent=data.shopping.filter(x=>!x.done).length}
@@ -111,26 +114,28 @@ function addTodo(id){let e=document.getElementById(id),v=e.value.trim();if(!v)re
 function addShop(id){let e=document.getElementById(id),v=e.value.trim();if(!v)return;data.shopping.push({text:v,done:false});e.value="";save();toast("Shopping item added ✓")}
 function toggle(t,i){data[t][i].done=!data[t][i].done;save()}
 function removeItem(t,i){data[t].splice(i,1);save()}
-function showPage(id,btn){document.querySelectorAll("#home > .card:not(.page)").forEach(x=>x.style.display="none");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".bottom button").forEach(x=>x.classList.remove("active"));if(btn)btn.classList.add("active");if(id==="calendar")renderCalendar()}
+function showPage(id,btn){document.querySelectorAll("#home > .card:not(.page)").forEach(x=>x.style.display="none");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll(".bottom button").forEach(x=>x.classList.remove("active"));if(btn)btn.classList.add("active")}
 function goHome(btn){document.getElementById("home").style.display="grid";document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".bottom button").forEach(x=>x.classList.remove("active"));btn.classList.add("active")}
-function renderMeals(){let h=Object.entries(data.meals).map(([d,m])=>`<div class="row"><span class="time">${d}</span><b>${esc(m)}</b></div>`).join("");document.getElementById("mealHome").innerHTML=h;let h2=Object.entries(data.meals).map(([d,m])=>`<div class="row"><span class="time">${d}</span><b>${esc(m)}</b></div>`).join("");document.getElementById("mealPage").innerHTML=h2}
-function editMeals(){let h=Object.entries(data.meals).map(([d,m])=>`<div class="row"><b style="width:70px">${d}</b><input id="meal_${d}" type="text" value="${esc(m)}"></div>`).join("")+`<button class="primary" onclick="saveMeals()">Save Meals</button>`;document.getElementById("mealPage").innerHTML=h}
+function renderMeals(){let h=Object.entries(data.meals).map(([d,m])=>`<div class="row"><span class="time">${d}</span><b>${esc(m)}</b></div>`).join("");document.getElementById("mealHome").innerHTML=h;let e=document.getElementById("mealPage");if(e)e.innerHTML=h}
+function editMeals(){let h=Object.entries(data.meals).map(([d,m])=>`<div class="row"><b style="width:70px">${d}</b><input id="meal_${d}" type="text" value="${esc(m)}"></div>`).join("")+`<button class="primary" onclick="saveMeals()">Save</button>`;document.getElementById("mealPage").innerHTML=h}
 function saveMeals(){Object.keys(data.meals).forEach(d=>data.meals[d]=document.getElementById("meal_"+d).value.trim()||"");save();toast("Meals saved ✓")}
 function dayKey(y,m,d){return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`}
-function renderCalendar(){let y=viewDate.getFullYear(),m=viewDate.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();document.getElementById("monthTitle").textContent=viewDate.toLocaleString([],{month:"long",year:"numeric"});let html="";for(let i=0;i<7;i++)html+=`<div class="dow">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][i]}</div>`;for(let i=0;i<first;i++)html+="<div></div>";for(let d=1;d<=days;d++){let k=dayKey(y,m,d),isToday=d===new Date().getDate()&&m===new Date().getMonth()&&y===new Date().getFullYear(),events=data.events[k]||[];html+=`<div class="day${isToday?" today":""}" onclick="openEvent('${k}')">${d}${events.map(e=>`<div class="event">${esc(e.title)}</div>`).join("")}</div>`}document.getElementById("calendar").innerHTML=html}
+function renderCalendar(){let y=viewDate.getFullYear(),m=viewDate.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();document.getElementById("monthTitle").textContent=viewDate.toLocaleDateString([],{month:"short",year:"numeric"});let g=document.getElementById("calendarGrid");g.innerHTML="";["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d=>g.innerHTML+=`<div class="dow">${d}</div>`);for(let i=0;i<first;i++)g.innerHTML+='<div></div>';let t=dayKey(y,m,new Date().getDate());for(let d=1;d<=days;d++){let k=dayKey(y,m,d),e=data.events[k]||[];g.innerHTML+=`<div class="day ${k===t?"today":""}" onclick="openEvent('${k}')"><b>${d}</b>${e.map(ev=>`<div class="event">${esc(ev.title)}</div>`).join("")}</div>`}}
 function changeMonth(n){viewDate.setMonth(viewDate.getMonth()+n);renderCalendar()}
 function openEvent(k){document.getElementById("eventModal").classList.add("show");document.getElementById("eventDate").value=k||dayKey(viewDate.getFullYear(),viewDate.getMonth(),new Date().getDate());document.getElementById("eventTitle").value="";document.getElementById("eventTime").value=""}
 function closeModal(){document.getElementById("eventModal").classList.remove("show")}
-function saveEvent(){let title=document.getElementById("eventTitle").value.trim(),date=document.getElementById("eventDate").value,time=document.getElementById("eventTime").value;if(!title||!date)return toast("Please fill in event name and date");if(!data.events[date])data.events[date]=[];data.events[date].push({title,time});save();closeModal();toast("Event added ✓")}
-async function loadWeather(){try{let u="https://api.open-meteo.com/v1/forecast?latitude=-31.9523&longitude=115.8613&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&timezone=auto",r=await fetch(u),j=await r.json(),c=j.current.weather_code,t=Math.round(j.current.temperature_2m);document.getElementById("weatherNow").textContent=t+"°C";document.getElementById("weatherBig").textContent=t+"°C";let txt=weatherText(c)+" "+weatherIcon(c);document.getElementById("weatherText").textContent=txt;document.getElementById("weatherBigText").textContent=txt;let forecast="";for(let i=1;i<4;i++){let day=new Date(j.daily.time[i]),max=Math.round(j.daily.temperature_2m_max[i]),icon=weatherIcon(j.daily.weather_code[i]);forecast+=`<div><b>${day.toLocaleDateString([],{weekday:"short"})}</b>${max}° ${icon}</div>`}document.getElementById("forecastHome").innerHTML=forecast;document.getElementById("forecastBig").innerHTML=forecast}catch(e){console.log("Weather error:",e);toast("Could not load weather")}}
+function saveEvent(){let title=document.getElementById("eventTitle").value.trim(),date=document.getElementById("eventDate").value,time=document.getElementById("eventTime").value;if(!title||!date)return;data.events[date]||(data.events[date]=[]);data.events[date].push({title:title,time:time});save();closeModal();toast("Event added ✓")}
+async function loadWeather(){try{let u="https://api.open-meteo.com/v1/forecast?latitude=-31.9523&longitude=115.8613&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code";let r=await fetch(u);let j=await r.json();let c=Math.round(j.current.temperature_2m);document.getElementById("weatherNow").textContent=c+"°C";document.getElementById("weatherBig").textContent=c+"°C";let t=weatherText(j.current.weather_code);document.getElementById("weatherText").textContent=t;document.getElementById("weatherBigText").textContent=t;let f="";for(let i=0;i<3;i++){let d=new Date();d.setDate(d.getDate()+i+1);let h=weatherIcon(j.daily.weather_code[i+1]);let max=Math.round(j.daily.temperature_2m_max[i+1]);f+=`<div><b>${d.toLocaleDateString([],{weekday:"short"})}</b><div>${h}</div>${max}°</div>`}document.getElementById("forecastHome").innerHTML=f;document.getElementById("forecastBig").innerHTML=f}catch(e){console.log("Weather error")}}
 function weatherText(c){if(c===0)return"Clear sky";if(c<=3)return"Partly cloudy";if(c<=48)return"Cloudy / fog";if(c<=67)return"Rain";if(c<=77)return"Snow / wintry";if(c<=82)return"Rain showers";return"Thunderstorm"}
 function weatherIcon(c){if(c===0)return"☀️";if(c<=3)return"⛅";if(c<=48)return"☁️";if(c<=67)return"🌧️";if(c<=82)return"🌦️";return"⛈️"}
 function addPhotos(files){[...files].forEach(f=>{let r=new FileReader();r.onload=e=>{data.photos.push(e.target.result);save()};r.readAsDataURL(f)})}
 function renderPhotos(){let e=document.getElementById("photoGrid");e.innerHTML=data.photos.map((p,i)=>`<div><img src="${p}"><button onclick="data.photos.splice(${i},1);save()">Remove</button></div>`).join("")}
 function notes(){let a=document.getElementById("notesHome"),b=document.getElementById("notesPage");a.value=data.notes;b.value=data.notes;a.oninput=()=>{data.notes=a.value;localStorage.setItem(KEY,JSON.stringify(data))};b.oninput=()=>{data.notes=b.value;localStorage.setItem(KEY,JSON.stringify(data))}}
+function showToast(t){toast(t)}
 function exportData(){let b=new Blob([JSON.stringify(data)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="wall-calendar-backup.json";a.click()}
 function importData(file){if(!file)return;let r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();toast("Backup restored ✓")}catch(e){toast("That backup could not be read.")}};r.readAsText(file)}
 function renderAll(){renderLists();renderMeals();renderCalendar();renderPhotos();notes()}
+function checkPin(){let pin=document.getElementById("pinInput").value;if(pin==="1234"){document.getElementById("pinLock").style.display="none"}else{document.getElementById("pinError").textContent="Invalid PIN";setTimeout(()=>{document.getElementById("pinError").textContent=""},2000)}}
 clock();setInterval(clock,1000);renderAll();loadWeather();
 </script>
 </body>
