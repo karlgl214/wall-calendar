@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>My Wall Calendar</title>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--muted:#777;--line:#ddd;--accent:#007aff}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+header{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:16px;z-index:5}
+h1{margin:0;font-size:26px}.clock{color:var(--muted);margin-top:4px}
+nav{display:flex;gap:8px;overflow:auto;padding:12px 16px;background:var(--bg);position:sticky;top:79px;z-index:4}
+nav button{white-space:nowrap;border:0;border-radius:12px;padding:11px 15px;background:#e5e5ea;font-size:15px}
+nav button.active{background:var(--accent);color:white}
+main{max-width:1100px;margin:auto;padding:12px 16px 40px}.page{display:none}.page.active{display:block}
+.card{background:var(--card);border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 2px 10px #0000000d}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
+input,textarea,select{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:white}
+button.primary,button.danger{border:0;border-radius:10px;padding:12px 16px;font-size:16px}
+button.primary{background:var(--accent);color:white}.danger{background:#ff3b30;color:white}
+.item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}.item span{flex:1}.done{text-decoration:line-through;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.day{min-height:75px;background:#fff;border-radius:9px;padding:7px;font-size:13px;border:1px solid var(--line)}.day b{display:block}.today{outline:2px solid var(--accent)}
+.muted{color:var(--muted)}.big{font-size:42px;font-weight:700}.photoBox{min-height:180px;border:2px dashed var(--line);border-radius:15px;padding:20px;text-align:center}
+img.preview{max-width:100%;max-height:300px;border-radius:12px;margin-top:12px}
+small{color:var(--muted)}
+
+/* PIN LOCK */
+#pinLock{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}.pinCard{width:min(420px,100%);background:#fff;border-radius:22px;padding:28px;box-shadow:0 8px 35px #0002;text-align:center}.pinCard h2{margin-top:0;font-size:28px}.pinDots{font-size:30px;letter-spacing:8px;margin:18px 0;color:#333}.pinPad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}.pinPad button{border:0;background:#e5e5ea;border-radius:14px;padding:18px;font-size:24px}.pinPad button:active{transform:scale(.97)}.pinError{min-height:24px;color:#ff3b30;font-size:14px}body.locked>header,body.locked>nav,body.locked>main{visibility:hidden}
+</style>
+</head>
+<body class="locked"><div id="pinLock"><div class="pinCard"><div style="font-size:44px">🔒</div><h2>Wall Calendar Locked</h2><p class="muted">Enter your 4-digit PIN to continue.</p><div class="pinDots" id="pinDots">○ ○ ○ ○</div><div class="pinError" id="pinError"></div><div class="pinPad"><button onclick="pinPress('1')">1</button><button onclick="pinPress('2')">2</button><button onclick="pinPress('3')">3</button><button onclick="pinPress('4')">4</button><button onclick="pinPress('5')">5</button><button onclick="pinPress('6')">6</button><button onclick="pinPress('7')">7</button><button onclick="pinPress('8')">8</button><button onclick="pinPress('9')">9</button><button onclick="pinClear()">Clear</button><button onclick="pinPress('0')">0</button><button onclick="pinBack()">⌫</button></div></div></div>
+
+<header>
+<h1>My Wall Calendar</h1>
+<div class="clock" id="clock"></div>
+</header>
+<nav id="nav"></nav>
+<main>
+<section id="home" class="page active">
+<div class="card"><div class="muted">Today</div><div class="big" id="homeDate"></div><p>Welcome to your wall calendar.</p></div>
+<div class="card"><h2>Quick view</h2><p id="summary"></p></div>
+</section>
+
+<section id="calendar" class="page">
+<div class="card">
+<div class="row"><button class="primary" onclick="changeMonth(-1)">‹ Previous</button><h2 id="monthTitle" style="text-align:center;min-width:180px"></h2><button class="primary" onclick="changeMonth(1)">Next ›</button></div>
+<div class="grid" id="cal"></div>
+</div>
+<div class="card"><h2>Add event</h2>
+<div class="row"><input id="eventDate" type="date"><input id="eventText" placeholder="Event"></div>
+<button class="primary" onclick="addEvent()">Add event</button>
+<div id="events"></div></div>
+</section>
+
+<section id="todo" class="page">
+<div class="card"><h2>To-Do</h2><div class="row"><input id="todoText" placeholder="Add a task"><button class="primary" onclick="addTodo()">Add</button></div><div id="todoList"></div></div>
+</section>
+
+<section id="shopping" class="page">
+<div class="card"><h2>Shopping</h2><div class="row"><input id="shopText" placeholder="Add shopping item"><button class="primary" onclick="addShop()">Add</button></div><div id="shopList"></div></div>
+</section>
+
+<section id="meals" class="page">
+<div class="card"><h2>Meal Planner</h2><div class="row"><input id="mealDate" type="date"><input id="mealText" placeholder="Meal"></div><button class="primary" onclick="addMeal()">Add meal</button><div id="mealList"></div></div>
+</section>
+
+<section id="weather" class="page">
+<div class="card"><h2>Perth Weather</h2><p id="weatherText">Loading weather…</p><small>Uses the public Open-Meteo service when internet access is available.</small></div>
+</section>
+
+<section id="photos" class="page">
+<div class="card"><h2>Photos</h2><div class="photoBox">
+<input id="photoInput" type="file" accept="image/*" multiple onchange="loadPhotos(event)">
+<div id="photosOut"></div></div></div>
+</section>
+
+<section id="notes" class="page">
+<div class="card"><h2>Notes</h2><textarea id="notesText" rows="12" placeholder="Write your notes here…"></textarea><br><br><button class="primary" onclick="saveNotes()">Save notes</button></div>
+</section>
+
+<section id="settings" class="page">
+<div class="card"><h2>Settings & Backup</h2><p><button class="danger" onclick="lockCalendar()">🔒 Lock calendar now</button></p>
+<p>All calendar, task, shopping, meal and note data is stored in this browser.</p>
+<button class="primary" onclick="backup()">Backup data</button>
+<button class="primary" onclick="document.getElementById('restore').click()">Restore data</button>
+<input id="restore" type="file" accept=".json" style="display:none" onchange="restoreData(event)">
+</div></section>
+</main>
+
+<script>/* FOUR-DIGIT PIN: change 1234 to your own PIN */
+const WALL_CALENDAR_PIN="1234";let enteredPin="";function updatePinDots(){document.getElementById("pinDots").textContent=("● ".repeat(enteredPin.length)+"○ ".repeat(4-enteredPin.length)).trim()}function pinPress(n){if(enteredPin.length>=4)return;enteredPin+=n;document.getElementById("pinError").textContent="";updatePinDots();if(enteredPin.length===4)setTimeout(checkPin,120)}function pinBack(){enteredPin=enteredPin.slice(0,-1);document.getElementById("pinError").textContent="";updatePinDots()}function pinClear(){enteredPin="";document.getElementById("pinError").textContent="";updatePinDots()}function checkPin(){if(enteredPin===WALL_CALENDAR_PIN){document.getElementById("pinLock").style.display="none";document.body.classList.remove("locked")}else{enteredPin="";updatePinDots();document.getElementById("pinError").textContent="Incorrect PIN. Please try again."}}function lockCalendar(){enteredPin="";updatePinDots();document.getElementById("pinError").textContent="";document.getElementById("pinLock").style.display="flex";document.body.classList.add("locked")}
+
+const tabs=[["home","Home"],["calendar","Calendar"],["todo","To-Do"],["shopping","Shopping"],["meals","Meals"],["weather","Weather"],["photos","Photos"],["notes","Notes"],["settings","Settings"]];
+nav.innerHTML=tabs.map(x=>`<button onclick="show('${x[0]}')">${x[1]}</button>`).join("");
+function show(id){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active");document.querySelectorAll("nav button").forEach((b,i)=>b.classList.toggle("active",tabs[i][0]===id));if(id==="calendar")renderCalendar();if(id==="weather")weather();updateSummary()}
+function tick(){let d=new Date();clock.textContent=d.toLocaleString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric",hour:"numeric",minute:"2-digit"});homeDate.textContent=d.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"});eventDate.value ||= d.toISOString().slice(0,10);mealDate.value ||= d.toISOString().slice(0,10)}setInterval(tick,1000);tick();
+
+let data=JSON.parse(localStorage.getItem("wallCalendarData")||'{"events":[],"todo":[],"shop":[],"meals":[],"notes":""}');
+function save(){localStorage.setItem("wallCalendarData",JSON.stringify(data));updateSummary()}
+function addEvent(){let t=eventText.value.trim(),d=eventDate.value;if(!t||!d)return;data.events.push({d,t});eventText.value="";save();renderCalendar()}
+function renderCalendar(){let now=window.calMonth||new Date();window.calMonth=now;monthTitle.textContent=now.toLocaleDateString("en-AU",{month:"long",year:"numeric"});let y=now.getFullYear(),m=now.getMonth(),first=new Date(y,m,1).getDay(),days=new Date(y,m+1,0).getDate();cal.innerHTML=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(x=>`<div class="muted" style="text-align:center">${x}</div>`).join("");for(let i=0;i<first;i++)cal.innerHTML+="<div></div>";for(let d=1;d<=days;d++){let ds=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`,ev=data.events.filter(e=>e.d===ds);cal.innerHTML+=`<div class="day ${ds===new Date().toISOString().slice(0,10)?"today":""}"><b>${d}</b>${ev.map(e=>`<div>${escapeHtml(e.t)}</div>`).join("")}</div>`}events.innerHTML=data.events.slice().sort((a,b)=>a.d.localeCompare(b.d)).map((e,i)=>`<div class="item"><span><b>${e.d}</b> — ${escapeHtml(e.t)}</span><button class="danger" onclick="data.events.splice(${i},1);save();renderCalendar()">Delete</button></div>`).join("")}
+function changeMonth(n){calMonth.setMonth(calMonth.getMonth()+n);renderCalendar()}
+function addTodo(){let t=todoText.value.trim();if(!t)return;data.todo.push({t,done:false});todoText.value="";save();renderTodo()}
+function renderTodo(){todoList.innerHTML=data.todo.map((x,i)=>`<div class="item"><input type="checkbox" ${x.done?"checked":""} onchange="data.todo[${i}].done=this.checked;save();renderTodo()"><span class="${x.done?"done":""}">${escapeHtml(x.t)}</span><button class="danger" onclick="data.todo.splice(${i},1);save();renderTodo()">Delete</button></div>`).join("")}renderTodo();
+function addShop(){let t=shopText.value.trim();if(!t)return;data.shop.push({t,done:false});shopText.value="";save();renderShop()}function renderShop(){shopList.innerHTML=data.shop.map((x,i)=>`<div class="item"><input type="checkbox" ${x.done?"checked":""} onchange="data.shop[${i}].done=this.checked;save();renderShop()"><span class="${x.done?"done":""}">${escapeHtml(x.t)}</span><button class="danger" onclick="data.shop.splice(${i},1);save();renderShop()">Delete</button></div>`).join("")}renderShop();
+function addMeal(){let t=mealText.value.trim(),d=mealDate.value;if(!t||!d)return;data.meals.push({d,t});mealText.value="";save();renderMeals()}function renderMeals(){mealList.innerHTML=data.meals.slice().sort((a,b)=>a.d.localeCompare(b.d)).map((x,i)=>`<div class="item"><span><b>${x.d}</b> — ${escapeHtml(x.t)}</span><button class="danger" onclick="data.meals.splice(${i},1);save();renderMeals()">Delete</button></div>`).join("")}renderMeals();
+function saveNotes(){data.notes=notesText.value;save();alert("Notes saved.")}notesText.value=data.notes||"";
+async function weather(){try{let r=await fetch("https://api.open-meteo.com/v1/forecast?latitude=-31.9505&longitude=115.8605&current=temperature_2m,weather_code,wind_speed_10m&timezone=Australia%2FPerth");let j=await r.json();weatherText.innerHTML=`Temperature: <b>${j.current.temperature_2m}°C</b><br>Wind: ${j.current.wind_speed_10m} km/h<br>Weather code: ${j.current.weather_code}`;}catch(e){weatherText.textContent="Weather unavailable right now. Check your internet connection.";}}
+function loadPhotos(e){photosOut.innerHTML="";[...e.target.files].forEach(f=>{let u=URL.createObjectURL(f),img=document.createElement("img");img.src=u;img.className="preview";photosOut.appendChild(img)})}
+function backup(){let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="wall-calendar-backup.json";a.click()}
+function restoreData(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();renderTodo();renderShop();renderMeals();renderCalendar();notesText.value=data.notes||"";alert("Backup restored.")}catch(err){alert("That backup file could not be read.")}};r.readAsText(f)}
+function updateSummary(){summary.textContent=`${data.events.length} events • ${data.todo.filter(x=>!x.done).length} open tasks • ${data.shop.filter(x=>!x.done).length} shopping items • ${data.meals.length} meals planned`}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
+show("home");
+</script>
+</body>
+</html>
