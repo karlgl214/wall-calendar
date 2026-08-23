@@ -4,17 +4,223 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>My Wall Calendar</title>
+
+<style>
+html,body{
+  margin:0;
+  width:100%;
+  height:100%;
+  background:#07111d;
+  color:#fff;
+  font-family:Arial,sans-serif;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.box{
+  width:min(420px,88vw);
+  background:#10202e;
+  border:1px solid #4b6275;
+  border-radius:20px;
+  padding:28px;
+  text-align:center;
+  box-shadow:0 15px 50px #0008;
+}
+
+.icon{
+  font-size:48px;
+}
+
+.box h1{
+  margin:8px 0;
+}
+
+.muted{
+  color:#aebbc7;
+}
+
+.pin{
+  width:100%;
+  box-sizing:border-box;
+  background:#091622;
+  color:#fff;
+  border:1px solid #486073;
+  border-radius:12px;
+  padding:14px;
+  text-align:center;
+  font-size:28px;
+  letter-spacing:8px;
+  margin:18px 0;
+}
+
+button{
+  width:100%;
+  background:#7650d6;
+  color:#fff;
+  border:1px solid #9b6cff;
+  border-radius:12px;
+  padding:14px;
+  font-size:18px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.status{
+  min-height:24px;
+  margin-top:12px;
+  color:#55d67a;
+}
+
+.error{
+  color:#ff5fa2;
+}
+</style>
 </head>
+
 <body>
-<p>Opening My Wall Calendar…</p>
+
+<div class="box">
+
+  <div class="icon">🔐</div>
+
+  <h1 id="title">My Wall Calendar</h1>
+
+  <p class="muted" id="message">
+    Enter your PIN to unlock the calendar.
+  </p>
+
+  <input
+    id="pin"
+    class="pin"
+    type="password"
+    inputmode="numeric"
+    maxlength="6"
+    autocomplete="off"
+    placeholder="••••••"
+  >
+
+  <button id="button" onclick="go()">
+    Unlock
+  </button>
+
+  <div id="status" class="status"></div>
+
+</div>
 
 <script>
-window.location.replace("sync.html");
+
+const pin = document.getElementById("pin");
+const title = document.getElementById("title");
+const message = document.getElementById("message");
+const button = document.getElementById("button");
+const status = document.getElementById("status");
+
+let mode = localStorage.getItem("wallCalendarPinHash")
+  ? "unlock"
+  : "create";
+
+if (mode === "create") {
+
+  title.textContent = "Set up your calendar PIN";
+
+  message.textContent =
+    "Create a 4–6 digit PIN for your wall calendar.";
+
+  button.textContent = "Create PIN";
+
+}
+
+async function hash(text) {
+
+  const buffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(text)
+  );
+
+  return Array.from(
+    new Uint8Array(buffer)
+  )
+  .map(byte => byte.toString(16).padStart(2,"0"))
+  .join("");
+
+}
+
+async function go() {
+
+  const value = pin.value
+    .replace(/\D/g,"")
+    .slice(0,6);
+
+  if (value.length < 4 || value.length > 6) {
+
+    status.textContent =
+      "Please enter 4–6 digits.";
+
+    status.className =
+      "status error";
+
+    return;
+  }
+
+  if (mode === "create") {
+
+    const savedHash = await hash(value);
+
+    localStorage.setItem(
+      "wallCalendarPinHash",
+      savedHash
+    );
+
+    window.location.replace("sync.html");
+
+    return;
+  }
+
+  const enteredHash = await hash(value);
+
+  const savedHash =
+    localStorage.getItem("wallCalendarPinHash");
+
+  if (enteredHash === savedHash) {
+
+    window.location.replace("sync.html");
+
+  } else {
+
+    pin.value = "";
+
+    status.textContent =
+      "Incorrect PIN. Please try again.";
+
+    status.className =
+      "status error";
+
+    pin.focus();
+
+  }
+
+}
+
+pin.addEventListener("input", () => {
+
+  pin.value = pin.value
+    .replace(/\D/g,"")
+    .slice(0,6);
+
+});
+
+pin.addEventListener("keydown", (event) => {
+
+  if (event.key === "Enter") {
+    go();
+  }
+
+});
+
+pin.focus();
+
 </script>
 
-<noscript>
- <a href="sync.html">Open My Wall Calendar</a>
-</noscript>
 </body>
 </html>
-
