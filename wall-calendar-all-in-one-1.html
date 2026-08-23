@@ -51,7 +51,7 @@ button.primary{background:#7650d6;border-color:#9b6cff}.add{float:right}.list{li
 </style>
 </head>
 <body>
-<header><div><h1>Good Morning! 👋</h1><div class="date" id="date"></div></div><div class="clock" id="clock"></div></header>
+<h1><span id="greeting">Good Morning!</span> 👋</h1>
 
 <main id="home">
 <section class="card"><h2 class="purple">📅 CALENDAR</h2><div id="todayEvents"></div><button class="primary add" onclick="showPage('calendar')">Open Calendar</button></section>
@@ -139,7 +139,29 @@ function exportData(){let b=new Blob([JSON.stringify(data)],{type:"application/j
 function importData(file){if(!file)return;let r=new FileReader();r.onload=()=>{try{data=JSON.parse(r.result);save();toast("Backup restored ✓")}catch(e){toast("That backup could not be read.")}};r.readAsText(file)}
 function unlockCalendar(){let pin=document.getElementById("pinInput").value;if(pin===PIN){document.getElementById("pinLock").style.display="none";document.getElementById("pinInput").value="";document.getElementById("pinError").textContent=""}else{document.getElementById("pinError").textContent="Invalid PIN"}}
 function renderAll(){renderLists();renderMeals();renderCalendar();renderPhotos();notes()}
-clock();setInterval(clock,1000);renderAll();loadWeather();
+function updateGreeting(){
+  const hour = new Date().getHours();
+  let greeting;
+
+  if (hour >= 5 && hour < 12) {
+    greeting = "Good Morning!";
+  } else if (hour >= 12 && hour < 17) {
+    greeting = "Good Afternoon!";
+  } else if (hour >= 17 && hour < 21) {
+    greeting = "Good Evening!";
+  } else {
+    greeting = "Good Night!";
+  }
+
+  const greetingElement = document.getElementById("greeting");
+  if (greetingElement) {
+    greetingElement.textContent = greeting;
+  }
+}
+
+updateGreeting();
+setInterval(updateGreeting, 60000);
+ clock();setInterval(clock,1000);renderAll();loadWeather();
 </script>
 </body>
 </html>
