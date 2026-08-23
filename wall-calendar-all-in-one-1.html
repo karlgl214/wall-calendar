@@ -140,7 +140,7 @@ function importData(file){if(!file)return;let r=new FileReader();r.onload=()=>{t
 function unlockCalendar(){let pin=document.getElementById("pinInput").value;if(pin===PIN){document.getElementById("pinLock").style.display="none";document.getElementById("pinInput").value="";document.getElementById("pinError").textContent=""}else{document.getElementById("pinError").textContent="Invalid PIN"}}
 function renderAll(){renderLists();renderMeals();renderCalendar();renderPhotos();notes()}
 clock();setInterval(clock,1000);renderAll();loadWeather();
-// Sunrise and sunset
+<script>// Sunrise and sunset
 const sunBox = document.createElement("div");
 sunBox.id = "sunBox";
 sunBox.style.cssText =
