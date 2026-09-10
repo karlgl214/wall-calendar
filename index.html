@@ -1,226 +1,151 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111d">
+<meta name="description" content="A private, browser-based wall calendar for events, tasks, shopping, meals, weather, notes and photos.">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <title>My Wall Calendar</title>
-
 <style>
-html,body{
-  margin:0;
-  width:100%;
-  height:100%;
-  background:#07111d;
-  color:#fff;
-  font-family:Arial,sans-serif;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.box{
-  width:min(420px,88vw);
-  background:#10202e;
-  border:1px solid #4b6275;
-  border-radius:20px;
-  padding:28px;
-  text-align:center;
-  box-shadow:0 15px 50px #0008;
-}
-
-.icon{
-  font-size:48px;
-}
-
-.box h1{
-  margin:8px 0;
-}
-
-.muted{
-  color:#aebbc7;
-}
-
-.pin{
-  width:100%;
-  box-sizing:border-box;
-  background:#091622;
-  color:#fff;
-  border:1px solid #486073;
-  border-radius:12px;
-  padding:14px;
-  text-align:center;
-  font-size:28px;
-  letter-spacing:8px;
-  margin:18px 0;
-}
-
-button{
-  width:100%;
-  background:#7650d6;
-  color:#fff;
-  border:1px solid #9b6cff;
-  border-radius:12px;
-  padding:14px;
-  font-size:18px;
-  font-weight:700;
-  cursor:pointer;
-}
-
-.status{
-  min-height:24px;
-  margin-top:12px;
-  color:#55d67a;
-}
-
-.error{
-  color:#ff5fa2;
-}
+:root{color-scheme:dark;--bg:#07111d;--panel:#10202e;--field:#091622;--line:#4b6275;--text:#fff;--muted:#aebbc7;--purple:#7650d6;--purple-line:#b794ff;--green:#55d67a;--pink:#ff7db4}
+*{box-sizing:border-box}
+html,body{margin:0;min-width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center;padding:20px}
+.box{width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;text-align:center;box-shadow:0 15px 50px #0008}
+.icon{font-size:48px}
+.box h1{margin:8px 0}
+.muted{color:var(--muted);line-height:1.45}
+.pin{width:100%;background:var(--field);color:var(--text);border:1px solid #607a8f;border-radius:12px;padding:14px;text-align:center;font-size:28px;letter-spacing:8px;margin:18px 0}
+button{width:100%;background:var(--purple);color:var(--text);border:1px solid var(--purple-line);border-radius:12px;padding:14px;font-size:18px;font-weight:700;cursor:pointer;transition:transform 160ms cubic-bezier(.23,1,.32,1),background-color 160ms}
+button:hover{background:#835fe0}
+button:active{transform:scale(.97)}
+button:disabled{cursor:wait;opacity:.7}
+:focus-visible{outline:3px solid #ffd34d;outline-offset:3px}
+.status{min-height:24px;margin-top:12px;color:var(--green);line-height:1.4}
+.error{color:var(--pink)}
+@media(max-width:420px){.box{padding:24px 20px}.pin{font-size:24px}}
 </style>
 </head>
-
 <body>
-
-<div class="box">
-
-  <div class="icon">🔐</div>
-
+<main class="box" aria-labelledby="title">
+  <div class="icon" aria-hidden="true">🔐</div>
   <h1 id="title">My Wall Calendar</h1>
-
-  <p class="muted" id="message">
-    Enter your PIN to unlock the calendar.
-  </p>
-
-  <input
-    id="pin"
-    class="pin"
-    type="password"
-    inputmode="numeric"
-    maxlength="6"
-    autocomplete="off"
-    placeholder="••••••"
-  >
-
-  <button id="button" onclick="go()">
-    Unlock
-  </button>
-
-  <div id="status" class="status"></div>
-
-</div>
-
+  <p class="muted" id="message">Enter your PIN to unlock the calendar.</p>
+  <form id="pinForm" novalidate>
+    <label for="pin">Calendar PIN</label>
+    <input id="pin" class="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="current-password" placeholder="••••••" aria-describedby="message status" required>
+    <button id="button" type="submit">Unlock</button>
+  </form>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+</main>
 <script>
+const PIN_HASH_KEY="wallCalendarPinHash";
+const UNLOCKED_KEY="wallCalendarUnlocked";
+const pin=document.getElementById("pin");
+const pinForm=document.getElementById("pinForm");
+const title=document.getElementById("title");
+const message=document.getElementById("message");
+const button=document.getElementById("button");
+const status=document.getElementById("status");
+let mode=localStorage.getItem(PIN_HASH_KEY)?"unlock":"create";
+let pendingPin="";
 
-const pin = document.getElementById("pin");
-const title = document.getElementById("title");
-const message = document.getElementById("message");
-const button = document.getElementById("button");
-const status = document.getElementById("status");
-
-let mode = localStorage.getItem("wallCalendarPinHash")
-  ? "unlock"
-  : "create";
-
-if (mode === "create") {
-
-  title.textContent = "Set up your calendar PIN";
-
-  message.textContent =
-    "Create a 4–6 digit PIN for your wall calendar.";
-
-  button.textContent = "Create PIN";
-
+function setStatus(text,isError=false){
+  status.textContent=text;
+  status.className="status"+(isError?" error":"");
 }
 
-async function hash(text) {
-
-  const buffer = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(text)
-  );
-
-  return Array.from(
-    new Uint8Array(buffer)
-  )
-  .map(byte => byte.toString(16).padStart(2,"0"))
-  .join("");
-
+function showCreateStep(){
+  title.textContent="Set up your calendar PIN";
+  message.textContent="Create a 4–6 digit PIN for this device.";
+  button.textContent="Continue";
+  pin.autocomplete="new-password";
 }
 
-async function go() {
+function showConfirmStep(){
+  title.textContent="Confirm your calendar PIN";
+  message.textContent="Enter the same PIN again to make sure it is correct.";
+  button.textContent="Create PIN";
+  pin.value="";
+  pin.focus();
+}
 
-  const value = pin.value
-    .replace(/\D/g,"")
-    .slice(0,6);
+function showUnlockStep(){
+  title.textContent="My Wall Calendar";
+  message.textContent="Enter your PIN to unlock the calendar.";
+  button.textContent="Unlock";
+  pin.autocomplete="current-password";
+}
 
-  if (value.length < 4 || value.length > 6) {
+async function hash(text){
+  const buffer=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buffer)).map(byte=>byte.toString(16).padStart(2,"0")).join("");
+}
 
-    status.textContent =
-      "Please enter 4–6 digits.";
+function openCalendar(){
+  sessionStorage.setItem(UNLOCKED_KEY,"1");
+  window.location.replace("sync.html");
+}
 
-    status.className =
-      "status error";
+pinForm.addEventListener("submit",async event=>{
+  event.preventDefault();
+  const value=pin.value.replace(/\D/g,"").slice(0,6);
+  pin.value=value;
 
-    return;
-  }
-
-  if (mode === "create") {
-
-    const savedHash = await hash(value);
-
-    localStorage.setItem(
-      "wallCalendarPinHash",
-      savedHash
-    );
-
-    window.location.replace("sync.html");
-
-    return;
-  }
-
-  const enteredHash = await hash(value);
-
-  const savedHash =
-    localStorage.getItem("wallCalendarPinHash");
-
-  if (enteredHash === savedHash) {
-
-    window.location.replace("sync.html");
-
-  } else {
-
-    pin.value = "";
-
-    status.textContent =
-      "Incorrect PIN. Please try again.";
-
-    status.className =
-      "status error";
-
+  if(value.length<4||value.length>6){
+    setStatus("Please enter 4–6 digits.",true);
     pin.focus();
-
+    return;
   }
 
-}
-
-pin.addEventListener("input", () => {
-
-  pin.value = pin.value
-    .replace(/\D/g,"")
-    .slice(0,6);
-
-});
-
-pin.addEventListener("keydown", (event) => {
-
-  if (event.key === "Enter") {
-    go();
+  if(mode==="create"&&!pendingPin){
+    pendingPin=value;
+    showConfirmStep();
+    setStatus("Now confirm your PIN.");
+    return;
   }
 
+  if(mode==="create"&&value!==pendingPin){
+    pendingPin="";
+    pin.value="";
+    showCreateStep();
+    setStatus("The PINs did not match. Please start again.",true);
+    pin.focus();
+    return;
+  }
+
+  button.disabled=true;
+  setStatus(mode==="create"?"Creating your PIN…":"Checking your PIN…");
+  try{
+    const enteredHash=await hash(value);
+    if(mode==="create"){
+      localStorage.setItem(PIN_HASH_KEY,enteredHash);
+      openCalendar();
+      return;
+    }
+    const savedHash=localStorage.getItem(PIN_HASH_KEY);
+    if(enteredHash===savedHash){
+      openCalendar();
+      return;
+    }
+    pin.value="";
+    setStatus("Incorrect PIN. Please try again.",true);
+    pin.focus();
+  }catch(error){
+    setStatus("The PIN could not be checked in this browser. Please try again.",true);
+  }finally{
+    button.disabled=false;
+  }
 });
 
+pin.addEventListener("input",()=>{
+  pin.value=pin.value.replace(/\D/g,"").slice(0,6);
+  if(status.classList.contains("error"))setStatus("");
+});
+
+if(mode==="create")showCreateStep();else showUnlockStep();
 pin.focus();
-
 </script>
-
 </body>
 </html>
