@@ -62,7 +62,7 @@ const phoneCode=document.getElementById("phoneCode");
 let peer=null,conn=null,role=null,lastFocus=null,connectionTimer=null;
 
 function frameData(){try{return JSON.parse(localStorage.getItem("wallCalendarAllInOneV1")||"null")||{}}catch(error){return {}}}
-function setFrameData(next){localStorage.setItem("wallCalendarAllInOneV1",JSON.stringify(next));try{frame.contentWindow.renderAll()}catch(error){}}
+function setFrameData(next){try{localStorage.setItem("wallCalendarAllInOneV1",JSON.stringify(next));frame.contentWindow.renderAll();return true}catch(error){setStatus("The photos could not be saved. Remove some photos or export a backup.","danger");return false}}
 function setStatus(text,className=""){const element=document.getElementById("syncStatus");element.textContent=text;element.className="status "+className}
 function panel(id,show){document.getElementById(id).hidden=!show}
 function clearConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null}}
@@ -124,9 +124,9 @@ function connectPhone(){
 function handleData(message){
   if(!message||!message.type)return;
   if(message.type==="photos"){
-    const next=frameData();next.photos=Array.isArray(message.photos)?message.photos:[];setFrameData(next);setStatus("Photos received ✓");
+    const next=frameData(),incoming=Array.isArray(message.photos)?message.photos:[],current=Array.isArray(next.photos)?next.photos:[];next.photos=[...new Set([...current,...incoming])].slice(-40);if(setFrameData(next))setStatus("Photos received ✓");
   }else if(message.type==="photo"){
-    const next=frameData();next.photos=next.photos||[];if(!next.photos.includes(message.photo))next.photos.push(message.photo);setFrameData(next);setStatus("Photo received ✓");
+    const next=frameData();next.photos=Array.isArray(next.photos)?next.photos:[];if(!next.photos.includes(message.photo))next.photos.push(message.photo);if(setFrameData(next))setStatus("Photo received ✓");
   }else if(message.type==="requestPhotos"&&role==="wall")sendWallPhotos();
 }
 function sendWallPhotos(){if(!conn||!conn.open){setStatus("Connect your phone first.","danger");return}const next=frameData();conn.send({type:"photos",photos:next.photos||[]});setStatus("Wall photos sent ✓")}
