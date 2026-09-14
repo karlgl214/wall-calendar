@@ -1,151 +1,185 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07111d">
-<meta name="description" content="A private, browser-based wall calendar for events, tasks, shopping, meals, weather, notes and photos.">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<title>My Wall Calendar</title>
-<style>
-:root{color-scheme:dark;--bg:#07111d;--panel:#10202e;--field:#091622;--line:#4b6275;--text:#fff;--muted:#aebbc7;--purple:#7650d6;--purple-line:#b794ff;--green:#55d67a;--pink:#ff7db4}
-*{box-sizing:border-box}
-html,body{margin:0;min-width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
-body{display:flex;align-items:center;justify-content:center;padding:20px}
-.box{width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;text-align:center;box-shadow:0 15px 50px #0008}
-.icon{font-size:48px}
-.box h1{margin:8px 0}
-.muted{color:var(--muted);line-height:1.45}
-.pin{width:100%;background:var(--field);color:var(--text);border:1px solid #607a8f;border-radius:12px;padding:14px;text-align:center;font-size:28px;letter-spacing:8px;margin:18px 0}
-button{width:100%;background:var(--purple);color:var(--text);border:1px solid var(--purple-line);border-radius:12px;padding:14px;font-size:18px;font-weight:700;cursor:pointer;transition:transform 160ms cubic-bezier(.23,1,.32,1),background-color 160ms}
-button:hover{background:#835fe0}
-button:active{transform:scale(.97)}
-button:disabled{cursor:wait;opacity:.7}
-:focus-visible{outline:3px solid #ffd34d;outline-offset:3px}
-.status{min-height:24px;margin-top:12px;color:var(--green);line-height:1.4}
-.error{color:var(--pink)}
-@media(max-width:420px){.box{padding:24px 20px}.pin{font-size:24px}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1e35">
+  <meta name="description" content="The private Gilvarry family wall calendar for events, tasks, shopping, notes and photos.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <title>Gilvarry Wall Calendar</title>
 </head>
 <body>
-<main class="box" aria-labelledby="title">
-  <div class="icon" aria-hidden="true">🔐</div>
-  <h1 id="title">My Wall Calendar</h1>
-  <p class="muted" id="message">Enter your PIN to unlock the calendar.</p>
-  <form id="pinForm" novalidate>
-    <label for="pin">Calendar PIN</label>
-    <input id="pin" class="pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" autocomplete="current-password" placeholder="••••••" aria-describedby="message status" required>
-    <button id="button" type="submit">Unlock</button>
-  </form>
-  <div id="status" class="status" role="status" aria-live="polite"></div>
-</main>
-<script>
-const PIN_HASH_KEY="wallCalendarPinHash";
-const UNLOCKED_KEY="wallCalendarUnlocked";
-const pin=document.getElementById("pin");
-const pinForm=document.getElementById("pinForm");
-const title=document.getElementById("title");
-const message=document.getElementById("message");
-const button=document.getElementById("button");
-const status=document.getElementById("status");
-let mode=localStorage.getItem(PIN_HASH_KEY)?"unlock":"create";
-let pendingPin="";
+  <a class="skip-link" href="#calendarWorkspace">Skip to calendar</a>
+  <div class="ambient ambient-one"></div>
+  <div class="ambient ambient-two"></div>
 
-function setStatus(text,isError=false){
-  status.textContent=text;
-  status.className="status"+(isError?" error":"");
-}
+  <main class="wall-shell" aria-label="Gilvarry family wall calendar">
+    <header class="hero" id="home">
+      <div class="hero-overlay"></div>
+      <section class="brand-block" aria-label="Calendar name">
+        <div class="brand-title"><i data-lucide="house"></i><h1>Our Family Calendar</h1></div>
+        <p class="family-name">GILVARRY · FAMILY · HOME</p>
+        <p class="hero-script">Same home. Brighter days. <span aria-hidden="true">♡</span></p>
+      </section>
 
-function showCreateStep(){
-  title.textContent="Set up your calendar PIN";
-  message.textContent="Create a 4–6 digit PIN for this device.";
-  button.textContent="Continue";
-  pin.autocomplete="new-password";
-}
+      <section class="time-block" aria-label="Current time and date">
+        <div class="clock" id="clock">7:42 <span>PM</span></div>
+        <div class="full-date" id="fullDate">Mon, 14 September 2026</div>
+      </section>
 
-function showConfirmStep(){
-  title.textContent="Confirm your calendar PIN";
-  message.textContent="Enter the same PIN again to make sure it is correct.";
-  button.textContent="Create PIN";
-  pin.value="";
-  pin.focus();
-}
+      <p class="hero-quote">Good things<br>happen at home <span aria-hidden="true">♡</span></p>
 
-function showUnlockStep(){
-  title.textContent="My Wall Calendar";
-  message.textContent="Enter your PIN to unlock the calendar.";
-  button.textContent="Unlock";
-  pin.autocomplete="current-password";
-}
+      <section class="weather-card" aria-label="Perth weather">
+        <div class="weather-now">
+          <span>Perth</span>
+          <strong id="weatherTemp">18°C</strong>
+          <small id="weatherText">Clear</small>
+        </div>
+        <div class="forecast" id="forecast" aria-live="polite">
+          <div><span>Tue</span><b>☀️</b><small>24° <em>12°</em></small></div>
+          <div><span>Wed</span><b>⛅</b><small>22° <em>13°</em></small></div>
+          <div><span>Thu</span><b>☀️</b><small>25° <em>14°</em></small></div>
+        </div>
+      </section>
+    </header>
 
-async function hash(text){
-  const buffer=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buffer)).map(byte=>byte.toString(16).padStart(2,"0")).join("");
-}
+    <div class="dashboard-grid">
+      <aside class="sidebar" aria-label="Family and navigation">
+        <div class="privacy-intro">
+          <i data-lucide="lock-keyhole"></i>
+          <div><strong>Private Calendar</strong><small>Only the Gilvarry family can access this device.</small></div>
+        </div>
 
-function openCalendar(){
-  sessionStorage.setItem(UNLOCKED_KEY,"1");
-  window.location.replace("sync.html");
-}
+        <div class="family-switcher" role="group" aria-label="Active family member">
+          <button class="member active" data-member="Karl" type="button"><span class="avatar avatar-k">K</span><span>Karl</span></button>
+          <button class="member" data-member="Mum" type="button"><span class="avatar avatar-m">M</span><span>Mum</span></button>
+          <button class="member" data-member="Dad" type="button"><span class="avatar avatar-d">D</span><span>Dad</span></button>
+        </div>
 
-pinForm.addEventListener("submit",async event=>{
-  event.preventDefault();
-  const value=pin.value.replace(/\D/g,"").slice(0,6);
-  pin.value=value;
+        <nav class="side-nav" aria-label="Calendar sections">
+          <button class="nav-item active" data-section="calendar" type="button"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
+          <button class="nav-item" data-section="tasks" type="button"><i data-lucide="square-check-big"></i><span>Tasks</span><b id="taskBadge">0</b></button>
+          <button class="nav-item" data-section="shopping" type="button"><i data-lucide="shopping-cart"></i><span>Shopping</span><b id="shopBadge">0</b></button>
+          <button class="nav-item" data-section="notes" type="button"><i data-lucide="notebook-text"></i><span>Notes</span></button>
+          <button class="nav-item" data-section="photos" type="button"><i data-lucide="image"></i><span>Photos</span></button>
+          <button class="nav-item" data-section="settings" type="button"><i data-lucide="settings"></i><span>Settings</span></button>
+        </nav>
 
-  if(value.length<4||value.length>6){
-    setStatus("Please enter 4–6 digits.",true);
-    pin.focus();
-    return;
-  }
+        <p class="sidebar-script">Home is everything <span aria-hidden="true">♡</span></p>
+      </aside>
 
-  if(mode==="create"&&!pendingPin){
-    pendingPin=value;
-    showConfirmStep();
-    setStatus("Now confirm your PIN.");
-    return;
-  }
+      <section class="workspace" id="calendarWorkspace" aria-live="polite">
+        <div id="calendarSection" class="section-panel active">
+          <div class="calendar-toolbar">
+            <div class="month-navigation">
+              <button class="icon-button" id="previousPeriod" type="button" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+              <h2 id="periodTitle">September 2026</h2>
+              <button class="icon-button" id="nextPeriod" type="button" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+              <button class="today-button" id="todayButton" type="button">Today</button>
+            </div>
+            <div class="view-switcher" role="group" aria-label="Calendar view">
+              <button class="active" data-calendar-view="month" type="button">Month</button>
+              <button data-calendar-view="week" type="button">Week</button>
+              <button data-calendar-view="day" type="button">Day</button>
+            </div>
+          </div>
+          <div id="calendarView"></div>
+        </div>
 
-  if(mode==="create"&&value!==pendingPin){
-    pendingPin="";
-    pin.value="";
-    showCreateStep();
-    setStatus("The PINs did not match. Please start again.",true);
-    pin.focus();
-    return;
-  }
+        <section id="tasksSection" class="section-panel manager-panel" aria-labelledby="tasksTitle">
+          <div class="panel-heading"><div><span class="eyebrow">Make the day lighter</span><h2 id="tasksTitle">Family Tasks</h2></div><button class="primary-button" data-open-quick="task" type="button"><i data-lucide="plus"></i>Add task</button></div>
+          <div class="progress-card"><div><strong id="taskProgressLabel">0 of 0 complete</strong><span>Today’s family progress</span></div><div class="progress-track"><span id="taskProgressBar"></span></div></div>
+          <div class="manager-list" id="taskManagerList"></div>
+        </section>
 
-  button.disabled=true;
-  setStatus(mode==="create"?"Creating your PIN…":"Checking your PIN…");
-  try{
-    const enteredHash=await hash(value);
-    if(mode==="create"){
-      localStorage.setItem(PIN_HASH_KEY,enteredHash);
-      openCalendar();
-      return;
-    }
-    const savedHash=localStorage.getItem(PIN_HASH_KEY);
-    if(enteredHash===savedHash){
-      openCalendar();
-      return;
-    }
-    pin.value="";
-    setStatus("Incorrect PIN. Please try again.",true);
-    pin.focus();
-  }catch(error){
-    setStatus("The PIN could not be checked in this browser. Please try again.",true);
-  }finally{
-    button.disabled=false;
-  }
-});
+        <section id="shoppingSection" class="section-panel manager-panel" aria-labelledby="shoppingTitle">
+          <div class="panel-heading"><div><span class="eyebrow">One shared list</span><h2 id="shoppingTitle">Shopping List</h2></div><button class="primary-button" data-open-quick="shopping" type="button"><i data-lucide="plus"></i>Add item</button></div>
+          <div class="manager-list" id="shoppingManagerList"></div>
+        </section>
 
-pin.addEventListener("input",()=>{
-  pin.value=pin.value.replace(/\D/g,"").slice(0,6);
-  if(status.classList.contains("error"))setStatus("");
-});
+        <section id="notesSection" class="section-panel manager-panel" aria-labelledby="notesTitle">
+          <div class="panel-heading"><div><span class="eyebrow">Remember together</span><h2 id="notesTitle">Family Notes</h2></div><button class="primary-button" data-open-quick="note" type="button"><i data-lucide="plus"></i>Add note</button></div>
+          <div class="notes-board" id="notesBoard"></div>
+        </section>
 
-if(mode==="create")showCreateStep();else showUnlockStep();
-pin.focus();
-</script>
+        <section id="photosSection" class="section-panel manager-panel" aria-labelledby="photosTitle">
+          <div class="panel-heading"><div><span class="eyebrow">Moments from home</span><h2 id="photosTitle">Family Photos</h2></div><button class="primary-button" id="uploadPhotoButton" type="button"><i data-lucide="image-plus"></i>Add photos</button></div>
+          <input class="visually-hidden" id="photoInput" type="file" accept="image/*" multiple>
+          <div class="photo-grid" id="photoGrid"></div>
+        </section>
+
+        <section id="settingsSection" class="section-panel manager-panel" aria-labelledby="settingsTitle">
+          <div class="panel-heading"><div><span class="eyebrow">This device</span><h2 id="settingsTitle">Calendar Settings</h2></div></div>
+          <div class="settings-grid">
+            <article class="setting-card"><i data-lucide="clock-3"></i><div><strong>24-hour time</strong><small>Choose how times appear across the calendar.</small></div><button class="toggle" id="timeFormatToggle" type="button" role="switch" aria-checked="false"><span></span></button></article>
+            <article class="setting-card"><i data-lucide="cloud-sun"></i><div><strong>Live Perth weather</strong><small>Weather refreshes automatically every 30 minutes.</small></div><button class="secondary-button" id="refreshWeather" type="button">Refresh</button></article>
+            <article class="setting-card"><i data-lucide="download"></i><div><strong>Backup calendar</strong><small>Download events, lists, notes and settings.</small></div><button class="secondary-button" id="exportData" type="button">Export</button></article>
+            <article class="setting-card"><i data-lucide="upload"></i><div><strong>Restore backup</strong><small>Import a Gilvarry calendar backup file.</small></div><button class="secondary-button" id="importDataButton" type="button">Import</button><input class="visually-hidden" id="importInput" type="file" accept="application/json,.json"></article>
+            <article class="setting-card"><i data-lucide="shield-check"></i><div><strong>Private by design</strong><small>Your calendar stays in this browser and is not sent to an account.</small></div><span class="status-pill">Protected</span></article>
+            <article class="setting-card danger-card"><i data-lucide="rotate-ccw"></i><div><strong>Reset sample calendar</strong><small>Restore the original Gilvarry sample data on this device.</small></div><button class="secondary-button danger-button" id="resetData" type="button">Reset</button></article>
+          </div>
+        </section>
+      </section>
+
+      <aside class="right-rail" aria-label="Daily overview">
+        <section class="rail-card today-card">
+          <div class="rail-heading"><h2 id="agendaHeading">Today</h2><span id="agendaDate">Mon, 14 September</span></div>
+          <div class="agenda-list" id="agendaList"></div>
+          <button class="rail-link" id="addAgendaEvent" type="button"><i data-lucide="plus"></i>Add event</button>
+        </section>
+
+        <section class="rail-card list-card">
+          <div class="rail-heading"><h2><i data-lucide="shopping-cart"></i>Shopping List</h2><button class="square-add" data-open-quick="shopping" type="button" aria-label="Add shopping item"><i data-lucide="plus"></i></button></div>
+          <div class="mini-list" id="shoppingMiniList"></div>
+        </section>
+
+        <section class="rail-card list-card notes-card">
+          <div class="rail-heading"><h2><i data-lucide="notebook-text"></i>Notes</h2><button class="square-add" data-open-quick="note" type="button" aria-label="Add note"><i data-lucide="plus"></i></button></div>
+          <div class="mini-list" id="notesMiniList"></div>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="quick-bar" aria-label="Quick actions">
+      <button class="quick-action home-action" data-section="calendar" type="button"><span><i data-lucide="house"></i></span><strong>Home<br>Dashboard</strong></button>
+      <button class="quick-action event-action" id="quickAddEvent" type="button"><span><i data-lucide="calendar-plus"></i></span><strong>Add Event</strong></button>
+      <button class="quick-action task-action" data-open-quick="task" type="button"><span><i data-lucide="list-checks"></i></span><strong>Add Task</strong></button>
+      <button class="quick-action shop-action" data-open-quick="shopping" type="button"><span><i data-lucide="shopping-cart"></i></span><strong>Add to Shopping</strong></button>
+      <button class="quick-action photo-action" id="quickAddPhoto" type="button"><span><i data-lucide="image-plus"></i></span><strong>Add Photo</strong></button>
+      <button class="quick-action settings-action" data-section="settings" type="button"><span><i data-lucide="settings"></i></span><strong>Settings</strong></button>
+      <div class="privacy-badge"><i data-lucide="badge-check"></i><p><strong>Private &amp; Secure</strong><span>This calendar is for our family only.<br>No accounts shared. No public access.</span></p></div>
+    </footer>
+  </main>
+
+  <dialog class="modal" id="eventModal" aria-labelledby="eventModalTitle">
+    <form method="dialog" class="modal-card" id="eventForm">
+      <div class="modal-heading"><div><span class="eyebrow">Family calendar</span><h2 id="eventModalTitle">Add an event</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <input id="eventId" type="hidden">
+      <label>Event name<input id="eventTitle" type="text" maxlength="80" placeholder="e.g. Dinner with Mum & Dad" required></label>
+      <div class="form-row"><label>Date<input id="eventDate" type="date" required></label><label>Time<input id="eventTime" type="time"></label></div>
+      <div class="form-row"><label>Family member<select id="eventMember"><option>Karl</option><option>Mum</option><option>Dad</option><option>Everyone</option></select></label><label>Type<select id="eventCategory"><option value="family">Family</option><option value="health">Health</option><option value="home">Home</option><option value="shopping">Shopping</option><option value="birthday">Birthday</option><option value="outing">Outing</option></select></label></div>
+      <label>Details<textarea id="eventDetails" maxlength="160" placeholder="Optional details"></textarea></label>
+      <div class="modal-actions"><button class="secondary-button" id="deleteEvent" type="button" hidden>Delete</button><span></span><button class="secondary-button close-modal" type="button">Cancel</button><button class="primary-button" type="submit">Save event</button></div>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="quickModal" aria-labelledby="quickModalTitle">
+    <form method="dialog" class="modal-card compact-modal" id="quickForm">
+      <div class="modal-heading"><div><span class="eyebrow">Quick add</span><h2 id="quickModalTitle">Add an item</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <input id="quickType" type="hidden">
+      <label id="quickTextLabel">Name<input id="quickText" type="text" maxlength="120" required></label>
+      <label id="quickOwnerLabel">For<select id="quickOwner"><option>Karl</option><option>Mum</option><option>Dad</option><option>Everyone</option></select></label>
+      <div class="modal-actions"><span></span><span></span><button class="secondary-button close-modal" type="button">Cancel</button><button class="primary-button" type="submit">Add</button></div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
