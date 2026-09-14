@@ -4,6 +4,7 @@
   const STORAGE_KEY = "gilvarryWallCalendarV1";
   const LEGACY_KEY = "wallCalendarAllInOneV1";
   const PERTH_ZONE = "Australia/Perth";
+  const DEFAULT_WEATHER = { name: "Perth", admin: "Western Australia", country: "Australia", latitude: -31.9523, longitude: 115.8613, timezone: "Australia/Perth" };
   const categoryIcons = {
     family: "users-round",
     health: "stethoscope",
@@ -17,6 +18,7 @@
     activeMember: "Karl",
     calendarView: "month",
     use24Hour: false,
+    weather: { ...DEFAULT_WEATHER },
     events: [
       { id: "sample-1", title: "Doctor", date: "2026-09-01", time: "10:00", member: "Mum", category: "health", details: "Annual check-up" },
       { id: "sample-2", title: "Physio", date: "2026-09-03", time: "11:00", member: "Dad", category: "health", details: "1 hour" },
@@ -70,6 +72,7 @@
       activeMember: ["Karl", "Mum", "Dad"].includes(candidate.activeMember) ? candidate.activeMember : fallback.activeMember,
       calendarView: ["month", "week", "day"].includes(candidate.calendarView) ? candidate.calendarView : fallback.calendarView,
       use24Hour: Boolean(candidate.use24Hour),
+      weather: normalizeWeather(candidate.weather),
       events: safeArray(candidate.events).filter(item => item && item.title && /^\d{4}-\d{2}-\d{2}$/.test(item.date)).map(item => ({
         id: String(item.id || uid("event")), title: String(item.title).slice(0, 80), date: item.date,
         time: /^\d{2}:\d{2}$/.test(item.time || "") ? item.time : "", member: String(item.member || "Everyone").slice(0, 20),
@@ -84,6 +87,21 @@
 
   function normalizeList(list, prefix) {
     return safeArray(list).filter(item => item && item.text).map(item => ({ id: String(item.id || uid(prefix)), text: String(item.text).slice(0, 120), owner: String(item.owner || "Everyone").slice(0, 20), done: Boolean(item.done) }));
+  }
+
+  function normalizeWeather(weather) {
+    if (!weather || typeof weather !== "object") return { ...DEFAULT_WEATHER };
+    const latitude = Number(weather.latitude);
+    const longitude = Number(weather.longitude);
+    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) return { ...DEFAULT_WEATHER };
+    return {
+      name: String(weather.name || "Current location").slice(0, 60),
+      admin: String(weather.admin || "").slice(0, 80),
+      country: String(weather.country || "").slice(0, 80),
+      latitude,
+      longitude,
+      timezone: String(weather.timezone || "auto").slice(0, 80),
+    };
   }
 
   function migrateLegacy() {
@@ -151,7 +169,7 @@
   function eventsFor(key) { return state.events.filter(event => event.date === key).sort(eventSort); }
 
   function cacheDom() {
-    ["clock", "fullDate", "weatherTemp", "weatherText", "forecast", "periodTitle", "calendarView", "agendaHeading", "agendaDate", "agendaList", "shoppingMiniList", "notesMiniList", "taskBadge", "shopBadge", "taskManagerList", "shoppingManagerList", "notesBoard", "photoGrid", "taskProgressLabel", "taskProgressBar", "eventModal", "eventForm", "quickModal", "quickForm", "toast"].forEach(id => dom[id] = byId(id));
+    ["clock", "fullDate", "weatherTemp", "weatherText", "weatherLocationName", "weatherCurrentIcon", "weatherHumidity", "weatherWind", "weatherSettingSummary", "forecast", "periodTitle", "calendarView", "agendaHeading", "agendaDate", "agendaList", "shoppingMiniList", "notesMiniList", "taskBadge", "shopBadge", "taskManagerList", "shoppingManagerList", "notesBoard", "photoGrid", "taskProgressLabel", "taskProgressBar", "eventModal", "eventForm", "quickModal", "quickForm", "weatherModal", "weatherSearchForm", "weatherSearchResults", "weatherSearchStatus", "toast"].forEach(id => dom[id] = byId(id));
   }
 
   function makeIcon(name) {
@@ -372,6 +390,10 @@
 
   function updateSettings() {
     const toggle = byId("timeFormatToggle"); toggle.setAttribute("aria-checked", String(state.use24Hour));
+    dom.weatherLocationName.textContent = state.weather.name;
+    const details = [state.weather.admin, state.weather.country].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(", ");
+    dom.weatherSettingSummary.textContent = `${state.weather.name}${details ? `, ${details}` : ""} · Refreshes every 30 minutes.`;
+    byId("weatherWidget").setAttribute("aria-label", `${state.weather.name} weather`);
   }
 
   function toggleListItem(type, id) {
@@ -446,22 +468,98 @@
   }
 
   function weatherLabel(code) {
-    if (code === 0) return "Clear"; if (code <= 3) return "Partly cloudy"; if (code <= 48) return "Cloudy"; if (code <= 67) return "Rain"; if (code <= 82) return "Showers"; return "Storms";
+    if (code === 0) return "Clear"; if (code === 1) return "Mainly clear"; if (code === 2) return "Partly cloudy"; if (code === 3) return "Overcast"; if (code <= 48) return "Foggy"; if (code <= 57) return "Drizzle"; if (code <= 67) return "Rain"; if (code <= 77) return "Snow"; if (code <= 82) return "Showers"; if (code <= 86) return "Snow showers"; return "Thunderstorms";
   }
-  function weatherEmoji(code) { if (code === 0) return "☀️"; if (code <= 3) return "⛅"; if (code <= 48) return "☁️"; if (code <= 67) return "🌧️"; if (code <= 82) return "🌦️"; return "⛈️"; }
+  function weatherEmoji(code, isDay = 1) { if (code === 0) return isDay ? "☀️" : "🌙"; if (code <= 2) return isDay ? "🌤️" : "☁️"; if (code === 3) return "☁️"; if (code <= 48) return "🌫️"; if (code <= 67) return "🌧️"; if (code <= 77) return "🌨️"; if (code <= 82) return "🌦️"; if (code <= 86) return "🌨️"; return "⛈️"; }
 
   async function loadWeather(withFeedback = false) {
-    if (withFeedback) showToast("Refreshing Perth weather…");
+    if (withFeedback) showToast(`Refreshing ${state.weather.name} weather…`);
     try {
-      const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=-31.9523&longitude=115.8613&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=4&timezone=Australia%2FPerth", { cache: "no-store" });
+      const params = new URLSearchParams({
+        latitude: String(state.weather.latitude),
+        longitude: String(state.weather.longitude),
+        current: "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day",
+        daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+        forecast_days: "4",
+        timezone: state.weather.timezone || "auto",
+      });
+      const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Weather unavailable");
-      const weather = await response.json(); dom.weatherTemp.textContent = `${Math.round(weather.current.temperature_2m)}°C`; dom.weatherText.textContent = weatherLabel(weather.current.weather_code);
+      const weather = await response.json();
+      dom.weatherLocationName.textContent = state.weather.name;
+      dom.weatherTemp.textContent = `${Math.round(weather.current.temperature_2m)}°C`;
+      dom.weatherCurrentIcon.textContent = weatherEmoji(weather.current.weather_code, weather.current.is_day);
+      dom.weatherText.textContent = `${weatherLabel(weather.current.weather_code)} · Feels ${Math.round(weather.current.apparent_temperature)}°`;
+      dom.weatherHumidity.textContent = `${Math.round(weather.current.relative_humidity_2m)}%`;
+      dom.weatherWind.textContent = `${Math.round(weather.current.wind_speed_10m)} km/h`;
       dom.forecast.replaceChildren();
       for (let index = 1; index < Math.min(4, weather.daily.time.length); index += 1) {
         const row = document.createElement("div"); const day = document.createElement("span"); day.textContent = formatDate(parseDateKey(weather.daily.time[index]), { weekday: "short" }); const icon = document.createElement("b"); icon.textContent = weatherEmoji(weather.daily.weather_code[index]); const temp = document.createElement("small"); temp.innerHTML = `${Math.round(weather.daily.temperature_2m_max[index])}° <em>${Math.round(weather.daily.temperature_2m_min[index])}°</em>`; row.append(day, icon, temp); dom.forecast.append(row);
       }
       if (withFeedback) showToast("Weather updated");
-    } catch { if (withFeedback) showToast("Weather is unavailable right now", true); }
+    } catch {
+      dom.weatherText.textContent = "Weather unavailable";
+      if (withFeedback) showToast("Weather is unavailable right now", true);
+    }
+  }
+
+  function openWeatherModal() {
+    byId("weatherSearchInput").value = "";
+    dom.weatherSearchResults.replaceChildren();
+    dom.weatherSearchStatus.textContent = `Current location: ${state.weather.name}`;
+    dom.weatherModal.showModal();
+    setTimeout(() => byId("weatherSearchInput").focus(), 30);
+  }
+
+  async function searchWeatherLocations(event) {
+    event.preventDefault();
+    const query = byId("weatherSearchInput").value.trim();
+    if (query.length < 2) return;
+    byId("weatherSearchButton").disabled = true;
+    dom.weatherSearchStatus.textContent = "Searching…";
+    dom.weatherSearchResults.replaceChildren();
+    try {
+      const params = new URLSearchParams({ name: query, count: "8", language: "en", format: "json" });
+      const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`, { cache: "no-store" });
+      if (!response.ok) throw new Error("Search failed");
+      const payload = await response.json();
+      const results = safeArray(payload.results);
+      if (!results.length) { dom.weatherSearchStatus.textContent = "No matching locations found. Try adding a state or country."; return; }
+      results.forEach(location => dom.weatherSearchResults.append(createLocationResult(location)));
+      dom.weatherSearchStatus.textContent = `${results.length} location${results.length === 1 ? "" : "s"} found.`;
+      refreshIcons(dom.weatherSearchResults);
+    } catch {
+      dom.weatherSearchStatus.textContent = "Location search is unavailable right now. Please try again.";
+    } finally {
+      byId("weatherSearchButton").disabled = false;
+    }
+  }
+
+  function createLocationResult(location) {
+    const button = document.createElement("button"); button.type = "button"; button.className = "location-result"; button.setAttribute("role", "option"); button.append(makeIcon("map-pin"));
+    const copy = document.createElement("span"); const name = document.createElement("strong"); name.textContent = location.name; const details = document.createElement("small"); details.textContent = [location.admin1, location.country].filter(Boolean).join(", "); copy.append(name, details);
+    const country = document.createElement("span"); country.className = "location-country"; country.textContent = location.country_code || "";
+    button.append(copy, country);
+    button.addEventListener("click", () => selectWeatherLocation({ name: location.name, admin: location.admin1 || "", country: location.country || "", latitude: location.latitude, longitude: location.longitude, timezone: location.timezone || "auto" }));
+    return button;
+  }
+
+  async function selectWeatherLocation(location) {
+    state.weather = normalizeWeather(location);
+    persist();
+    updateSettings();
+    dom.weatherModal.close();
+    await loadWeather(true);
+  }
+
+  function useCurrentWeatherLocation() {
+    if (!navigator.geolocation) { dom.weatherSearchStatus.textContent = "Location services are not available in this browser."; return; }
+    const button = byId("useCurrentLocation"); button.disabled = true; dom.weatherSearchStatus.textContent = "Requesting this monitor’s location…";
+    navigator.geolocation.getCurrentPosition(
+      position => { button.disabled = false; selectWeatherLocation({ name: "Current location", admin: "", country: "", latitude: position.coords.latitude, longitude: position.coords.longitude, timezone: "auto" }); },
+      error => { button.disabled = false; dom.weatherSearchStatus.textContent = error.code === 1 ? "Location permission was declined. Search for your city instead." : "The monitor’s location could not be found. Search for your city instead."; },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 1800000 },
+    );
   }
 
   function resizePhoto(file) {
@@ -499,8 +597,10 @@
     byId("photoInput").addEventListener("change", event => addPhotos(event.target.files));
     dom.eventForm.addEventListener("submit", saveEvent); dom.quickForm.addEventListener("submit", saveQuick); byId("deleteEvent").addEventListener("click", deleteCurrentEvent);
     document.querySelectorAll(".close-modal").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
-    [dom.eventModal, dom.quickModal].forEach(modal => modal.addEventListener("click", event => { if (event.target === modal) modal.close(); }));
+    [dom.eventModal, dom.quickModal, dom.weatherModal].forEach(modal => modal.addEventListener("click", event => { if (event.target === modal) modal.close(); }));
     byId("timeFormatToggle").addEventListener("click", () => { state.use24Hour = !state.use24Hour; persist(); updateClock(); renderAll(); });
+    ["weatherLocationButton", "changeWeatherLocation"].forEach(id => byId(id).addEventListener("click", openWeatherModal));
+    dom.weatherSearchForm.addEventListener("submit", searchWeatherLocations); byId("useCurrentLocation").addEventListener("click", useCurrentWeatherLocation);
     byId("refreshWeather").addEventListener("click", () => loadWeather(true)); byId("exportData").addEventListener("click", exportData); byId("importDataButton").addEventListener("click", () => byId("importInput").click()); byId("importInput").addEventListener("change", event => importData(event.target.files[0]));
     byId("resetData").addEventListener("click", () => { if (!window.confirm("Reset this device to the original Gilvarry sample calendar?")) return; state = defaultState(); selectedKey = perthDateKey(); viewDate = parseDateKey(selectedKey); persist("Sample calendar restored"); renderAll(); showSection("calendar"); });
   }
