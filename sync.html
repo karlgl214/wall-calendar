@@ -20,8 +20,9 @@ iframe{border:0;width:100%;height:100%;display:block}
 #syncModal.show{display:flex}
 .box{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:22px;width:min(520px,94vw);max-height:calc(100vh - 36px);overflow:auto;box-shadow:0 15px 50px #0008}
 .box h2{margin-top:0}.muted{color:var(--muted);line-height:1.4}.row{display:flex;gap:10px;align-items:center;margin:12px 0}.row>*{flex:1}
-button,input{font:inherit}button{background:#1a2b3b;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-weight:700;cursor:pointer;transition:transform 160ms cubic-bezier(.23,1,.32,1)}button:active{transform:scale(.97)}
-.primary{background:var(--purple);border-color:#b794ff}.code{font-size:34px;letter-spacing:8px;text-align:center;background:var(--field);border:1px solid #607a8f;border-radius:12px;padding:14px;margin:15px 0;font-weight:700}
+button,input{font:inherit}button{background:#1a2b3b;color:var(--text);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-weight:700;cursor:pointer;transition:transform 160ms cubic-bezier(.2,.2,.3,1)}
+button:hover{background:#273d4f;transform:translateY(-1px)}button:active{transform:translateY(0)}
+.primary{background:var(--purple);border-color:#b794ff}.code{font-size:34px;letter-spacing:8px;text-align:center;background:var(--field);border:1px solid #607a8f;border-radius:12px;padding:14px;margin:12px 0;font-family:monospace;user-select:all}
 label{display:block;margin-bottom:7px;font-weight:700}input{background:var(--field);border:1px solid #607a8f;color:var(--text);border-radius:9px;padding:11px;width:100%}
 :focus-visible{outline:3px solid #ffd34d;outline-offset:3px}.status{min-height:24px;margin:10px 0;color:var(--green);line-height:1.4}.danger{color:var(--pink)}.small{font-size:13px}
 [hidden]{display:none!important}
@@ -30,7 +31,7 @@ label{display:block;margin-bottom:7px;font-weight:700}input{background:var(--fie
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
-<iframe id="calendar" title="My Wall Calendar dashboard" src="wall-calendar-all-in-one-1.html"></iframe>
+<iframe id="calendar" title="My Wall Calendar dashboard" src="wall-calendar-all-in-one-1.html" allow="fullscreen"></iframe>
 <div id="syncModal" role="dialog" aria-modal="true" aria-labelledby="syncTitle" aria-describedby="syncHelp">
   <div class="box">
     <h2 id="syncTitle">📱 Shared phone ↔ wall sync</h2>
@@ -62,7 +63,7 @@ const phoneCode=document.getElementById("phoneCode");
 let peer=null,conn=null,role=null,lastFocus=null,connectionTimer=null;
 
 function frameData(){try{return JSON.parse(localStorage.getItem("wallCalendarAllInOneV1")||"null")||{}}catch(error){return {}}}
-function setFrameData(next){try{localStorage.setItem("wallCalendarAllInOneV1",JSON.stringify(next));frame.contentWindow.renderAll();return true}catch(error){setStatus("The photos could not be saved. Remove some photos or export a backup.","danger");return false}}
+function setFrameData(next){try{localStorage.setItem("wallCalendarAllInOneV1",JSON.stringify(next));frame.contentWindow.renderAll?.();return true}catch(error){setStatus("The photos could not be saved. Check your storage.",true);return false}}
 function setStatus(text,className=""){const element=document.getElementById("syncStatus");element.textContent=text;element.className="status "+className}
 function panel(id,show){document.getElementById(id).hidden=!show}
 function clearConnectionTimer(){if(connectionTimer){clearTimeout(connectionTimer);connectionTimer=null}}
@@ -96,7 +97,7 @@ function startWall(){
     conn.on("close",()=>setStatus("Phone disconnected.","danger"));
     conn.on("error",()=>setStatus("The phone connection failed. Please try again.","danger"));
   });
-  peer.on("error",()=>setStatus("Could not start this code. Tap “This is the wall” again.","danger"));
+  peer.on("error",()=>setStatus("Could not start this code. Tap "This is the wall" again.","danger"));
 }
 
 function startPhone(){
@@ -124,13 +125,13 @@ function connectPhone(){
 function handleData(message){
   if(!message||!message.type)return;
   if(message.type==="photos"){
-    const next=frameData(),incoming=Array.isArray(message.photos)?message.photos:[],current=Array.isArray(next.photos)?next.photos:[];next.photos=[...new Set([...current,...incoming])].slice(-40);if(setFrameData(next))setStatus("Photos received ✓");
+    const next=frameData(),incoming=Array.isArray(message.photos)?message.photos:[],current=Array.isArray(next.photos)?next.photos:[];next.photos=[...new Set([...current,...incoming])].slice(-40);setFrameData(next);setStatus("Photos received ✓")
   }else if(message.type==="photo"){
-    const next=frameData();next.photos=Array.isArray(next.photos)?next.photos:[];if(!next.photos.includes(message.photo))next.photos.push(message.photo);if(setFrameData(next))setStatus("Photo received ✓");
+    const next=frameData();next.photos=Array.isArray(next.photos)?next.photos:[];if(!next.photos.includes(message.photo))next.photos.push(message.photo);if(setFrameData(next))setStatus("Photo received ✓")
   }else if(message.type==="requestPhotos"&&role==="wall")sendWallPhotos();
 }
-function sendWallPhotos(){if(!conn||!conn.open){setStatus("Connect your phone first.","danger");return}const next=frameData();conn.send({type:"photos",photos:next.photos||[]});setStatus("Wall photos sent ✓")}
-function sendPhonePhotos(){if(!conn||!conn.open){setStatus("Connect to the wall first.","danger");return}const photos=frameData().photos||[];if(!photos.length){setStatus("There are no photos on this phone yet.","danger");return}conn.send({type:"photos",photos});setStatus("Photos sent to wall ✓")}
+function sendWallPhotos(){if(!conn||!conn.open){setStatus("Connect your phone first.","danger");return}const next=frameData();conn.send({type:"photos",photos:next.photos||[]});setStatus("Sent "+((next.photos||[]).length)+" photo(s)")}
+function sendPhonePhotos(){if(!conn||!conn.open){setStatus("Connect to the wall first.","danger");return}const photos=frameData().photos||[];if(!photos.length){setStatus("There are no photos on this device to send.","danger");return}conn.send({type:"photos",photos:photos});setStatus("Sent "+photos.length+" photo(s)")}
 
 phoneCode.addEventListener("input",()=>{phoneCode.value=phoneCode.value.replace(/\D/g,"").slice(0,6)});
 phoneCode.addEventListener("keydown",event=>{if(event.key==="Enter")connectPhone()});
