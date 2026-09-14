@@ -63,6 +63,7 @@
 
         <nav class="side-nav" aria-label="Calendar sections">
           <button class="nav-item active" data-section="calendar" type="button"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
+          <button class="nav-item" data-section="cameras" type="button"><i data-lucide="cctv"></i><span>Cameras</span></button>
           <button class="nav-item" data-section="tasks" type="button"><i data-lucide="square-check-big"></i><span>Tasks</span><b id="taskBadge">0</b></button>
           <button class="nav-item" data-section="shopping" type="button"><i data-lucide="shopping-cart"></i><span>Shopping</span><b id="shopBadge">0</b></button>
           <button class="nav-item" data-section="notes" type="button"><i data-lucide="notebook-text"></i><span>Notes</span></button>
@@ -91,6 +92,25 @@
           <div id="calendarView"></div>
         </div>
 
+        <section id="camerasSection" class="section-panel camera-panel" aria-labelledby="camerasTitle">
+          <div class="camera-toolbar">
+            <div><span class="eyebrow">Concord CNK884P-A</span><h2 id="camerasTitle">Security Cameras</h2></div>
+            <div class="camera-status" id="cameraStatus" data-state="idle"><span></span><strong>Camera off</strong></div>
+          </div>
+          <div class="camera-stage" id="cameraStage">
+            <video id="cameraVideo" playsinline muted aria-label="Live Concord security camera feed"></video>
+            <div class="camera-placeholder" id="cameraPlaceholder"><i data-lucide="video"></i><h3 id="cameraPlaceholderTitle">HDMI capture ready</h3><p id="cameraPlaceholderText">Connect the Concord recorder’s HDMI output to a USB capture dongle, then tap <strong>Start live view</strong>.</p></div>
+            <div class="live-badge" id="cameraLiveBadge" hidden><span></span>LIVE</div>
+          </div>
+          <div class="camera-controls">
+            <label class="camera-source"><span>Video source</span><select id="cameraSource" aria-label="Video source"><option value="">Default camera or capture device</option></select></label>
+            <button class="primary-button" id="startCamera" type="button"><i data-lucide="play"></i>Start live view</button>
+            <button class="secondary-button" id="stopCamera" type="button" disabled><i data-lucide="square"></i>Stop</button>
+            <button class="secondary-button" id="fullscreenCamera" type="button" disabled><i data-lucide="maximize"></i>Fullscreen</button>
+          </div>
+          <div class="camera-help"><i data-lucide="shield-check"></i><p><strong>Local and private.</strong> Video travels only from the USB capture device to this browser. It is not uploaded to the website or stored by the calendar.</p></div>
+        </section>
+
         <section id="tasksSection" class="section-panel manager-panel" aria-labelledby="tasksTitle">
           <div class="panel-heading"><div><span class="eyebrow">Make the day lighter</span><h2 id="tasksTitle">Family Tasks</h2></div><button class="primary-button" data-open-quick="task" type="button"><i data-lucide="plus"></i>Add task</button></div>
           <div class="progress-card"><div><strong id="taskProgressLabel">0 of 0 complete</strong><span>Today’s family progress</span></div><div class="progress-track"><span id="taskProgressBar"></span></div></div>
@@ -118,6 +138,7 @@
           <div class="settings-grid">
             <article class="setting-card"><i data-lucide="clock-3"></i><div><strong>24-hour time</strong><small>Choose how times appear across the calendar.</small></div><button class="toggle" id="timeFormatToggle" type="button" role="switch" aria-checked="false"><span></span></button></article>
             <article class="setting-card"><i data-lucide="map-pinned"></i><div><strong>Weather location</strong><small id="weatherSettingSummary">Perth, Western Australia · Refreshes every 30 minutes.</small></div><div class="setting-actions"><button class="secondary-button" id="changeWeatherLocation" type="button">Change</button><button class="secondary-button" id="refreshWeather" type="button">Refresh</button></div></article>
+            <article class="setting-card"><i data-lucide="cctv"></i><div><strong>Concord HDMI capture</strong><small id="cameraSettingSummary">Connect the recorder through a USB capture dongle.</small></div><button class="secondary-button" id="openCameraSettings" type="button">Open camera</button></article>
             <article class="setting-card"><i data-lucide="download"></i><div><strong>Backup calendar</strong><small>Download events, lists, notes and settings.</small></div><button class="secondary-button" id="exportData" type="button">Export</button></article>
             <article class="setting-card"><i data-lucide="upload"></i><div><strong>Restore backup</strong><small>Import a Gilvarry calendar backup file.</small></div><button class="secondary-button" id="importDataButton" type="button">Import</button><input class="visually-hidden" id="importInput" type="file" accept="application/json,.json"></article>
             <article class="setting-card"><i data-lucide="shield-check"></i><div><strong>Private by design</strong><small>Your calendar stays in this browser and is not sent to an account.</small></div><span class="status-pill">Protected</span></article>
@@ -147,6 +168,7 @@
 
     <footer class="quick-bar" aria-label="Quick actions">
       <button class="quick-action home-action" data-section="calendar" type="button"><span><i data-lucide="house"></i></span><strong>Home<br>Dashboard</strong></button>
+      <button class="quick-action camera-action" data-section="cameras" type="button"><span><i data-lucide="cctv"></i></span><strong>Live Cameras</strong></button>
       <button class="quick-action event-action" id="quickAddEvent" type="button"><span><i data-lucide="calendar-plus"></i></span><strong>Add Event</strong></button>
       <button class="quick-action task-action" data-open-quick="task" type="button"><span><i data-lucide="list-checks"></i></span><strong>Add Task</strong></button>
       <button class="quick-action shop-action" data-open-quick="shopping" type="button"><span><i data-lucide="shopping-cart"></i></span><strong>Add to Shopping</strong></button>

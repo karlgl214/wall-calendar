@@ -18,6 +18,7 @@
     activeMember: "Karl",
     calendarView: "month",
     use24Hour: false,
+    cameraDeviceId: "",
     weather: { ...DEFAULT_WEATHER },
     events: [
       { id: "sample-1", title: "Doctor", date: "2026-09-01", time: "10:00", member: "Mum", category: "health", details: "Annual check-up" },
@@ -57,6 +58,7 @@
   let selectedKey = perthDateKey();
   let viewDate = parseDateKey(selectedKey);
   let toastTimer = null;
+  let cameraStream = null;
 
   function byId(id) { return document.getElementById(id); }
   function uid(prefix) {
@@ -72,6 +74,7 @@
       activeMember: ["Karl", "Mum", "Dad"].includes(candidate.activeMember) ? candidate.activeMember : fallback.activeMember,
       calendarView: ["month", "week", "day"].includes(candidate.calendarView) ? candidate.calendarView : fallback.calendarView,
       use24Hour: Boolean(candidate.use24Hour),
+      cameraDeviceId: String(candidate.cameraDeviceId || "").slice(0, 240),
       weather: normalizeWeather(candidate.weather),
       events: safeArray(candidate.events).filter(item => item && item.title && /^\d{4}-\d{2}-\d{2}$/.test(item.date)).map(item => ({
         id: String(item.id || uid("event")), title: String(item.title).slice(0, 80), date: item.date,
@@ -169,7 +172,7 @@
   function eventsFor(key) { return state.events.filter(event => event.date === key).sort(eventSort); }
 
   function cacheDom() {
-    ["clock", "fullDate", "weatherTemp", "weatherText", "weatherLocationName", "weatherCurrentIcon", "weatherHumidity", "weatherWind", "weatherSettingSummary", "forecast", "periodTitle", "calendarView", "agendaHeading", "agendaDate", "agendaList", "shoppingMiniList", "notesMiniList", "taskBadge", "shopBadge", "taskManagerList", "shoppingManagerList", "notesBoard", "photoGrid", "taskProgressLabel", "taskProgressBar", "eventModal", "eventForm", "quickModal", "quickForm", "weatherModal", "weatherSearchForm", "weatherSearchResults", "weatherSearchStatus", "toast"].forEach(id => dom[id] = byId(id));
+    ["clock", "fullDate", "weatherTemp", "weatherText", "weatherLocationName", "weatherCurrentIcon", "weatherHumidity", "weatherWind", "weatherSettingSummary", "forecast", "periodTitle", "calendarView", "agendaHeading", "agendaDate", "agendaList", "shoppingMiniList", "notesMiniList", "taskBadge", "shopBadge", "taskManagerList", "shoppingManagerList", "notesBoard", "photoGrid", "taskProgressLabel", "taskProgressBar", "cameraStatus", "cameraStage", "cameraVideo", "cameraPlaceholderTitle", "cameraPlaceholderText", "cameraLiveBadge", "cameraSource", "cameraSettingSummary", "eventModal", "eventForm", "quickModal", "quickForm", "weatherModal", "weatherSearchForm", "weatherSearchResults", "weatherSearchStatus", "toast"].forEach(id => dom[id] = byId(id));
   }
 
   function makeIcon(name) {
@@ -401,10 +404,12 @@
   }
   function deleteListItem(type, id) { state[type] = state[type].filter(item => item.id !== id); persist("Item removed"); renderMiniLists(); renderManagers(); }
 
-  function showSection(section) {
+  function showSection(section, updateHash = true) {
+    if (section !== "cameras" && cameraStream) stopCamera();
     document.querySelectorAll(".section-panel").forEach(panel => panel.classList.remove("active"));
     const target = byId(`${section}Section`) || byId("calendarSection"); target.classList.add("active");
     document.querySelectorAll(".nav-item").forEach(button => button.classList.toggle("active", button.dataset.section === section));
+    if (updateHash && window.location.hash !== `#${section}`) history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${section}`);
     if (window.innerWidth < 760) target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -465,6 +470,109 @@
 
   function showToast(message, isError = false) {
     dom.toast.textContent = message; dom.toast.className = `toast show${isError ? " error" : ""}`; clearTimeout(toastTimer); toastTimer = setTimeout(() => dom.toast.className = "toast", 2800);
+  }
+
+  function setCameraStatus(mode, label) {
+    dom.cameraStatus.dataset.state = mode;
+    dom.cameraStatus.querySelector("strong").textContent = label;
+  }
+
+  function cameraErrorMessage(error) {
+    if (error?.name === "NotAllowedError" || error?.name === "SecurityError") return "Camera access was blocked. Allow camera permission for this site and try again.";
+    if (error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError") return "No HDMI capture device was found. Check the USB connection and try again.";
+    if (error?.name === "NotReadableError" || error?.name === "TrackStartError") return "The capture device is busy. Close other camera apps, then try again.";
+    if (error?.name === "OverconstrainedError") return "The saved video source is unavailable. Choose the default source and try again.";
+    return "The HDMI capture feed could not be started. Check the connection and browser permission.";
+  }
+
+  async function populateCameraDevices() {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      dom.cameraSettingSummary.textContent = "This browser does not support local camera capture.";
+      byId("startCamera").disabled = true;
+      return [];
+    }
+    try {
+      const devices = (await navigator.mediaDevices.enumerateDevices()).filter(device => device.kind === "videoinput");
+      const current = state.cameraDeviceId;
+      dom.cameraSource.replaceChildren();
+      const fallback = document.createElement("option"); fallback.value = ""; fallback.textContent = "Default camera or capture device"; dom.cameraSource.append(fallback);
+      devices.forEach((device, index) => {
+        const option = document.createElement("option"); option.value = device.deviceId; option.textContent = device.label || `Video input ${index + 1}`; dom.cameraSource.append(option);
+      });
+      dom.cameraSource.value = devices.some(device => device.deviceId === current) ? current : "";
+      const selected = devices.find(device => device.deviceId === dom.cameraSource.value);
+      const capture = selected || devices.find(device => /capture|hdmi|usb|uvc/i.test(device.label));
+      dom.cameraSettingSummary.textContent = capture?.label ? `${capture.label} is available on this device.` : devices.length ? `${devices.length} video source${devices.length === 1 ? "" : "s"} detected. Select one in Cameras.` : "Connect the recorder through a USB capture dongle.";
+      return devices;
+    } catch {
+      dom.cameraSettingSummary.textContent = "Video sources will appear after camera permission is allowed.";
+      return [];
+    }
+  }
+
+  async function startCamera() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraStatus("error", "Unsupported browser");
+      dom.cameraPlaceholderTitle.textContent = "Live capture unavailable";
+      dom.cameraPlaceholderText.textContent = "Open the dashboard in current Chrome, Edge, or Safari over HTTPS.";
+      showToast("This browser cannot access a local capture device", true);
+      return;
+    }
+    stopCamera();
+    setCameraStatus("connecting", "Connecting…");
+    byId("startCamera").disabled = true;
+    const deviceId = dom.cameraSource.value;
+    const video = { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30, max: 60 } };
+    if (deviceId) video.deviceId = { exact: deviceId };
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+      dom.cameraVideo.srcObject = cameraStream;
+      await dom.cameraVideo.play();
+      dom.cameraStage.classList.add("streaming");
+      dom.cameraLiveBadge.hidden = false;
+      byId("stopCamera").disabled = false;
+      byId("fullscreenCamera").disabled = false;
+      setCameraStatus("live", "Live view");
+      const track = cameraStream.getVideoTracks()[0];
+      const actualDeviceId = track?.getSettings?.().deviceId || deviceId;
+      if (actualDeviceId) { state.cameraDeviceId = actualDeviceId; persist(); }
+      track?.addEventListener?.("ended", stopCamera, { once: true });
+      await populateCameraDevices();
+      const sourceLabel = track?.label || dom.cameraSource.selectedOptions[0]?.textContent || "HDMI capture";
+      dom.cameraSettingSummary.textContent = `${sourceLabel} is configured for live view.`;
+      showToast("Concord live view started");
+    } catch (error) {
+      cameraStream = null;
+      const message = cameraErrorMessage(error);
+      setCameraStatus("error", "Connection problem");
+      dom.cameraPlaceholderTitle.textContent = "Couldn’t start live view";
+      dom.cameraPlaceholderText.textContent = message;
+      byId("startCamera").disabled = false;
+      showToast(message, true);
+    }
+  }
+
+  function stopCamera() {
+    cameraStream?.getTracks?.().forEach(track => track.stop());
+    cameraStream = null;
+    dom.cameraVideo.pause();
+    dom.cameraVideo.srcObject = null;
+    dom.cameraStage.classList.remove("streaming");
+    dom.cameraLiveBadge.hidden = true;
+    dom.cameraPlaceholderTitle.textContent = "HDMI capture ready";
+    dom.cameraPlaceholderText.textContent = "Connect the Concord recorder’s HDMI output to a USB capture dongle, then tap Start live view.";
+    byId("startCamera").disabled = false;
+    byId("stopCamera").disabled = true;
+    byId("fullscreenCamera").disabled = true;
+    setCameraStatus("idle", "Camera off");
+  }
+
+  async function fullscreenCamera() {
+    try {
+      if (dom.cameraStage.requestFullscreen) await dom.cameraStage.requestFullscreen();
+      else if (dom.cameraVideo.webkitEnterFullscreen) dom.cameraVideo.webkitEnterFullscreen();
+      else throw new Error("Fullscreen unavailable");
+    } catch { showToast("Fullscreen is unavailable in this browser", true); }
   }
 
   function weatherLabel(code) {
@@ -601,12 +709,18 @@
     byId("timeFormatToggle").addEventListener("click", () => { state.use24Hour = !state.use24Hour; persist(); updateClock(); renderAll(); });
     ["weatherLocationButton", "changeWeatherLocation"].forEach(id => byId(id).addEventListener("click", openWeatherModal));
     dom.weatherSearchForm.addEventListener("submit", searchWeatherLocations); byId("useCurrentLocation").addEventListener("click", useCurrentWeatherLocation);
+    byId("openCameraSettings").addEventListener("click", () => showSection("cameras"));
+    byId("startCamera").addEventListener("click", startCamera); byId("stopCamera").addEventListener("click", stopCamera); byId("fullscreenCamera").addEventListener("click", fullscreenCamera);
+    dom.cameraSource.addEventListener("change", () => { state.cameraDeviceId = dom.cameraSource.value; persist(); if (cameraStream) startCamera(); });
+    navigator.mediaDevices?.addEventListener?.("devicechange", populateCameraDevices);
+    window.addEventListener("beforeunload", stopCamera);
+    window.addEventListener("hashchange", () => { const section = window.location.hash.slice(1); if (["calendar", "cameras", "tasks", "shopping", "notes", "photos", "settings"].includes(section)) showSection(section, false); });
     byId("refreshWeather").addEventListener("click", () => loadWeather(true)); byId("exportData").addEventListener("click", exportData); byId("importDataButton").addEventListener("click", () => byId("importInput").click()); byId("importInput").addEventListener("change", event => importData(event.target.files[0]));
     byId("resetData").addEventListener("click", () => { if (!window.confirm("Reset this device to the original Gilvarry sample calendar?")) return; state = defaultState(); selectedKey = perthDateKey(); viewDate = parseDateKey(selectedKey); persist("Sample calendar restored"); renderAll(); showSection("calendar"); });
   }
 
   function init() {
-    cacheDom(); bindEvents(); updateClock(); renderAll(); loadWeather(); setInterval(updateClock, 30000); setInterval(loadWeather, 1800000);
+    cacheDom(); bindEvents(); updateClock(); renderAll(); const section = window.location.hash.slice(1); if (["cameras", "tasks", "shopping", "notes", "photos", "settings"].includes(section)) showSection(section, false); loadWeather(); populateCameraDevices(); setInterval(updateClock, 30000); setInterval(loadWeather, 1800000);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
