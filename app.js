@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "gilvarryWallCalendarV1";
   const LEGACY_KEY = "wallCalendarAllInOneV1";
+  const LOCK_KEY = "gilvarryWallLockV1";
   const PERTH_ZONE = "Australia/Perth";
   const DEFAULT_WEATHER = { name: "Perth", admin: "Western Australia", country: "Australia", latitude: -31.9523, longitude: 115.8613, timezone: "Australia/Perth" };
   const categoryIcons = {
@@ -19,6 +20,8 @@
     calendarView: "month",
     use24Hour: false,
     cameraDeviceId: "",
+    manualDim: false,
+    nightMode: { enabled: false, start: "21:30", end: "06:30", brightness: 18, wakeUntil: 0 },
     weather: { ...DEFAULT_WEATHER },
     events: [
       { id: "sample-1", title: "Doctor", date: "2026-09-01", time: "10:00", member: "Mum", category: "health", details: "Annual check-up" },
@@ -59,6 +62,11 @@
   let viewDate = parseDateKey(selectedKey);
   let toastTimer = null;
   let cameraStream = null;
+  let lockState = loadLockState();
+  let pinEntry = "";
+  let pinChecking = false;
+  let failedPinAttempts = 0;
+  let pinBlockedUntil = 0;
 
   function byId(id) { return document.getElementById(id); }
   function uid(prefix) {
@@ -66,6 +74,27 @@
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
   function safeArray(value) { return Array.isArray(value) ? value : []; }
+
+  function normalizeNightMode(nightMode) {
+    const fallback = { enabled: false, start: "21:30", end: "06:30", brightness: 18, wakeUntil: 0 };
+    if (!nightMode || typeof nightMode !== "object") return fallback;
+    const time = (value, backup) => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || "")) ? String(value) : backup;
+    const brightness = Number(nightMode.brightness);
+    return { enabled: Boolean(nightMode.enabled), start: time(nightMode.start, fallback.start), end: time(nightMode.end, fallback.end), brightness: [10, 18, 30, 40].includes(brightness) ? brightness : fallback.brightness, wakeUntil: Number.isFinite(Number(nightMode.wakeUntil)) ? Number(nightMode.wakeUntil) : 0 };
+  }
+
+  function loadLockState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(LOCK_KEY) || "null");
+      if (!saved || typeof saved !== "object") return { hash: "", salt: "", locked: false, lockAtNight: false };
+      return { hash: String(saved.hash || "").slice(0, 128), salt: String(saved.salt || "").slice(0, 128), locked: Boolean(saved.locked && saved.hash && saved.salt), lockAtNight: Boolean(saved.lockAtNight) };
+    } catch { return { hash: "", salt: "", locked: false, lockAtNight: false }; }
+  }
+
+  function persistLock() {
+    try { localStorage.setItem(LOCK_KEY, JSON.stringify(lockState)); return true; }
+    catch { showToast("The screen-lock setting could not be saved", true); return false; }
+  }
 
   function normalizeState(candidate) {
     const fallback = defaultState();
@@ -75,6 +104,8 @@
       calendarView: ["month", "week", "day"].includes(candidate.calendarView) ? candidate.calendarView : fallback.calendarView,
       use24Hour: Boolean(candidate.use24Hour),
       cameraDeviceId: String(candidate.cameraDeviceId || "").slice(0, 240),
+      manualDim: Boolean(candidate.manualDim),
+      nightMode: normalizeNightMode(candidate.nightMode),
       weather: normalizeWeather(candidate.weather),
       events: safeArray(candidate.events).filter(item => item && item.title && /^\d{4}-\d{2}-\d{2}$/.test(item.date)).map(item => ({
         id: String(item.id || uid("event")), title: String(item.title).slice(0, 80), date: item.date,
@@ -170,9 +201,14 @@
   }
   function eventSort(a, b) { return (a.time || "99:99").localeCompare(b.time || "99:99") || a.title.localeCompare(b.title); }
   function eventsFor(key) { return state.events.filter(event => event.date === key).sort(eventSort); }
+  function dashboardTimeZone() {
+    const candidate = state.weather.timezone && state.weather.timezone !== "auto" ? state.weather.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
+    try { new Intl.DateTimeFormat("en-AU", { timeZone: candidate }).format(); return candidate; }
+    catch { return PERTH_ZONE; }
+  }
 
   function cacheDom() {
-    ["clock", "fullDate", "weatherTemp", "weatherText", "weatherLocationName", "weatherCurrentIcon", "weatherHumidity", "weatherWind", "weatherSettingSummary", "forecast", "periodTitle", "calendarView", "agendaHeading", "agendaDate", "agendaList", "shoppingMiniList", "notesMiniList", "taskBadge", "shopBadge", "taskManagerList", "shoppingManagerList", "notesBoard", "photoGrid", "taskProgressLabel", "taskProgressBar", "cameraStatus", "cameraStage", "cameraVideo", "cameraPlaceholderTitle", "cameraPlaceholderText", "cameraLiveBadge", "cameraSource", "cameraSettingSummary", "eventModal", "eventForm", "quickModal", "quickForm", "weatherModal", "weatherSearchForm", "weatherSearchResults", "weatherSearchStatus", "toast"].forEach(id => dom[id] = byId(id));
+    ["clock", "fullDate", "weatherTemp", "weatherText", "weatherLocationName", "weatherCurrentIcon", "weatherHumidity", "weatherWind", "weatherSettingSummary", "forecast", "periodTitle", "calendarView", "agendaHeading", "agendaDate", "agendaList", "shoppingMiniList", "notesMiniList", "taskBadge", "shopBadge", "taskManagerList", "shoppingManagerList", "notesBoard", "photoGrid", "taskProgressLabel", "taskProgressBar", "cameraStatus", "cameraStage", "cameraVideo", "cameraPlaceholderTitle", "cameraPlaceholderText", "cameraLiveBadge", "cameraSource", "cameraSettingSummary", "nightScheduleSummary", "nightScheduleToggle", "nightStart", "nightEnd", "nightBrightness", "screenDimmer", "dimWakeButton", "dimClock", "dimStatus", "quickDim", "quickDimLabel", "lockSettingSummary", "lockAtNight", "lockScreen", "lockClock", "lockDate", "pinDots", "lockMessage", "pinModal", "pinForm", "currentPinLabel", "pinFormError", "eventModal", "eventForm", "quickModal", "quickForm", "weatherModal", "weatherSearchForm", "weatherSearchResults", "weatherSearchStatus", "toast"].forEach(id => dom[id] = byId(id));
   }
 
   function makeIcon(name) {
@@ -184,12 +220,17 @@
 
   function updateClock() {
     const now = new Date();
-    const parts = new Intl.DateTimeFormat("en-AU", { timeZone: PERTH_ZONE, hour: "numeric", minute: "2-digit", hour12: !state.use24Hour }).formatToParts(now);
+    const zone = dashboardTimeZone();
+    const parts = new Intl.DateTimeFormat("en-AU", { timeZone: zone, hour: "numeric", minute: "2-digit", hour12: !state.use24Hour }).formatToParts(now);
     const hour = parts.find(part => part.type === "hour")?.value || "";
     const minute = parts.find(part => part.type === "minute")?.value || "";
     const dayPeriod = parts.find(part => part.type === "dayPeriod")?.value || "";
     dom.clock.innerHTML = `${hour}:${minute}${dayPeriod ? ` <span>${dayPeriod}</span>` : ""}`;
-    dom.fullDate.textContent = new Intl.DateTimeFormat("en-AU", { timeZone: PERTH_ZONE, weekday: "short", day: "numeric", month: "long", year: "numeric" }).format(now);
+    dom.fullDate.textContent = new Intl.DateTimeFormat("en-AU", { timeZone: zone, weekday: "short", day: "numeric", month: "long", year: "numeric" }).format(now);
+    dom.dimClock.textContent = new Intl.DateTimeFormat("en-AU", { timeZone: zone, hour: "numeric", minute: "2-digit", hour12: !state.use24Hour }).format(now);
+    dom.lockClock.textContent = dom.dimClock.textContent;
+    dom.lockDate.textContent = new Intl.DateTimeFormat("en-AU", { timeZone: zone, weekday: "long", day: "numeric", month: "long" }).format(now);
+    applyNightMode(now);
   }
 
   function renderAll() {
@@ -393,6 +434,8 @@
 
   function updateSettings() {
     const toggle = byId("timeFormatToggle"); toggle.setAttribute("aria-checked", String(state.use24Hour));
+    updateNightControls();
+    updateLockSettings();
     dom.weatherLocationName.textContent = state.weather.name;
     const details = [state.weather.admin, state.weather.country].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(", ");
     dom.weatherSettingSummary.textContent = `${state.weather.name}${details ? `, ${details}` : ""} · Refreshes every 30 minutes.`;
@@ -470,6 +513,184 @@
 
   function showToast(message, isError = false) {
     dom.toast.textContent = message; dom.toast.className = `toast show${isError ? " error" : ""}`; clearTimeout(toastTimer); toastTimer = setTimeout(() => dom.toast.className = "toast", 2800);
+  }
+
+  function minutesFromTime(value) {
+    const [hours, minutes] = String(value || "00:00").split(":").map(Number);
+    return hours * 60 + minutes;
+  }
+
+  function isNightScheduleActive(now = new Date()) {
+    if (!state.nightMode.enabled) return false;
+    const parts = new Intl.DateTimeFormat("en-AU", { timeZone: dashboardTimeZone(), hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+    const current = Number(parts.find(part => part.type === "hour")?.value || 0) * 60 + Number(parts.find(part => part.type === "minute")?.value || 0);
+    const start = minutesFromTime(state.nightMode.start);
+    const end = minutesFromTime(state.nightMode.end);
+    if (start === end) return false;
+    return start < end ? current >= start && current < end : current >= start || current < end;
+  }
+
+  function nextWakeBoundary(now = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-AU", { timeZone: dashboardTimeZone(), hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+    const current = Number(parts.find(part => part.type === "hour")?.value || 0) * 60 + Number(parts.find(part => part.type === "minute")?.value || 0);
+    const end = minutesFromTime(state.nightMode.end);
+    return now.getTime() + ((end - current + 1440) % 1440 || 1440) * 60000;
+  }
+
+  function updateNightControls(dimmed = document.body.classList.contains("is-dimmed")) {
+    dom.nightScheduleToggle.setAttribute("aria-checked", String(state.nightMode.enabled));
+    dom.nightStart.value = state.nightMode.start;
+    dom.nightEnd.value = state.nightMode.end;
+    dom.nightBrightness.value = String(state.nightMode.brightness);
+    [dom.nightStart, dom.nightEnd, dom.nightBrightness].forEach(control => control.disabled = !state.nightMode.enabled);
+    dom.nightScheduleSummary.textContent = state.nightMode.enabled ? `${formatTime(state.nightMode.start)}–${formatTime(state.nightMode.end)} · ${state.nightMode.brightness}% screen level` : `Off · ${state.nightMode.brightness}% screen level preset`;
+    dom.quickDim.setAttribute("aria-pressed", String(dimmed));
+    dom.quickDimLabel.textContent = dimmed ? "Wake Screen" : "Dim Screen";
+  }
+
+  function applyNightMode(now = new Date(), announce = false) {
+    if (state.nightMode.wakeUntil && now.getTime() >= state.nightMode.wakeUntil) { state.nightMode.wakeUntil = 0; persist(); }
+    const scheduled = isNightScheduleActive(now);
+    const dimmed = state.manualDim || (scheduled && now.getTime() >= state.nightMode.wakeUntil);
+    const wasDimmed = document.body.classList.contains("is-dimmed");
+    document.documentElement.classList.remove("pre-dim");
+    document.body.classList.toggle("is-dimmed", dimmed);
+    dom.screenDimmer.classList.toggle("active", dimmed);
+    dom.screenDimmer.setAttribute("aria-hidden", String(!dimmed));
+    dom.dimWakeButton.disabled = !dimmed;
+    dom.screenDimmer.style.setProperty("--dim-opacity", String(1 - state.nightMode.brightness / 100));
+    dom.dimStatus.textContent = scheduled && !state.manualDim ? `Scheduled until ${formatTime(state.nightMode.end)}` : `Screen level ${state.nightMode.brightness}%`;
+    updateNightControls(dimmed);
+    if (dimmed && cameraStream) stopCamera();
+    else if (dimmed && document.fullscreenElement === dom.cameraStage) document.exitFullscreen().catch(() => {});
+    if (dimmed && !wasDimmed && scheduled && lockState.lockAtNight && lockState.hash && !lockState.locked) lockScreenNow(false);
+    if (announce && dimmed !== wasDimmed) showToast(dimmed ? `Screen dimmed to ${state.nightMode.brightness}%` : "Screen restored");
+  }
+
+  function toggleQuickDim() {
+    if (document.body.classList.contains("is-dimmed")) { wakeScreen(); return; }
+    state.manualDim = true;
+    state.nightMode.wakeUntil = 0;
+    persist();
+    applyNightMode(new Date(), true);
+  }
+
+  function wakeScreen() {
+    state.manualDim = false;
+    state.nightMode.wakeUntil = isNightScheduleActive() ? nextWakeBoundary() : 0;
+    persist();
+    applyNightMode(new Date(), true);
+  }
+
+  function saveNightSettings() {
+    state.nightMode.start = dom.nightStart.value || "21:30";
+    state.nightMode.end = dom.nightEnd.value || "06:30";
+    state.nightMode.brightness = Number(dom.nightBrightness.value) || 18;
+    state.nightMode.wakeUntil = 0;
+    state.manualDim = false;
+    persist("Night schedule updated");
+    applyNightMode();
+  }
+
+  function updateLockSettings() {
+    const hasPin = Boolean(lockState.hash && lockState.salt);
+    dom.lockSettingSummary.textContent = hasPin ? `PIN set${lockState.lockAtNight ? " · Locks with the night schedule." : " · Ready to lock."}` : "No PIN set · local display lock only.";
+    byId("configurePin").textContent = hasPin ? "Change PIN" : "Set PIN";
+    byId("lockNowSettings").disabled = !hasPin;
+    byId("quickLock").disabled = !hasPin;
+    dom.lockAtNight.disabled = !hasPin;
+    dom.lockAtNight.checked = hasPin && lockState.lockAtNight;
+  }
+
+  function bytesToBase64(bytes) { return btoa(String.fromCharCode(...new Uint8Array(bytes))); }
+
+  async function hashPin(pin, salt) {
+    const input = new TextEncoder().encode(`${salt}:${pin}`);
+    if (crypto.subtle) return bytesToBase64(await crypto.subtle.digest("SHA-256", input));
+    let hash = 2166136261; input.forEach(byte => { hash ^= byte; hash = Math.imul(hash, 16777619); });
+    return String(hash >>> 0);
+  }
+
+  function newSalt() {
+    const bytes = new Uint8Array(16); crypto.getRandomValues(bytes); return bytesToBase64(bytes);
+  }
+
+  async function verifyPin(pin) {
+    return Boolean(lockState.hash && lockState.salt && await hashPin(pin, lockState.salt) === lockState.hash);
+  }
+
+  function openPinModal() {
+    const hasPin = Boolean(lockState.hash);
+    byId("pinModalTitle").textContent = hasPin ? "Change four-digit PIN" : "Set a four-digit PIN";
+    dom.currentPinLabel.hidden = !hasPin;
+    byId("currentPin").required = hasPin;
+    byId("currentPin").value = ""; byId("newPin").value = ""; byId("confirmPin").value = "";
+    byId("removePin").hidden = !hasPin;
+    dom.pinFormError.textContent = "";
+    dom.pinModal.showModal();
+    setTimeout(() => byId(hasPin ? "currentPin" : "newPin").focus(), 30);
+  }
+
+  async function savePin(event) {
+    event.preventDefault();
+    const current = byId("currentPin").value;
+    const next = byId("newPin").value;
+    const confirm = byId("confirmPin").value;
+    dom.pinFormError.textContent = "";
+    if (lockState.hash && !await verifyPin(current)) { dom.pinFormError.textContent = "The current PIN is incorrect."; return; }
+    if (!/^\d{4}$/.test(next)) { dom.pinFormError.textContent = "Enter exactly four numbers."; return; }
+    if (next !== confirm) { dom.pinFormError.textContent = "The new PINs do not match."; return; }
+    const salt = newSalt();
+    lockState = { ...lockState, salt, hash: await hashPin(next, salt), locked: false };
+    if (!persistLock()) return;
+    dom.pinModal.close(); updateLockSettings(); showToast(lockState.hash ? "Four-digit PIN saved" : "PIN removed");
+  }
+
+  async function removePin() {
+    const current = byId("currentPin").value;
+    if (!await verifyPin(current)) { dom.pinFormError.textContent = "Enter the current PIN before removing it."; return; }
+    lockState = { hash: "", salt: "", locked: false, lockAtNight: false };
+    persistLock(); dom.pinModal.close(); updateLockSettings(); showToast("Screen lock removed");
+  }
+
+  function updatePinDots() {
+    [...dom.pinDots.children].forEach((dot, index) => dot.classList.toggle("filled", index < pinEntry.length));
+    dom.pinDots.setAttribute("aria-label", `${pinEntry.length} of 4 PIN digits entered`);
+  }
+
+  function resetPinEntry(message = "") {
+    pinEntry = ""; pinChecking = false; dom.lockMessage.textContent = message; updatePinDots();
+  }
+
+  function lockScreenNow(announce = true) {
+    if (!lockState.hash) { openPinModal(); showToast("Set a four-digit PIN first"); return; }
+    stopCamera();
+    lockState.locked = true; persistLock(); resetPinEntry();
+    dom.lockScreen.hidden = false; dom.lockScreen.setAttribute("aria-hidden", "false"); document.body.classList.add("is-locked"); document.documentElement.classList.remove("prelocked");
+    if (announce) showToast("Screen locked");
+  }
+
+  function unlockScreen() {
+    lockState.locked = false; persistLock(); resetPinEntry(); failedPinAttempts = 0; pinBlockedUntil = 0;
+    dom.lockScreen.hidden = true; dom.lockScreen.setAttribute("aria-hidden", "true"); document.body.classList.remove("is-locked");
+  }
+
+  async function enterPinDigit(digit) {
+    if (!lockState.locked || pinChecking || pinEntry.length >= 4) return;
+    if (Date.now() < pinBlockedUntil) { dom.lockMessage.textContent = `Try again in ${Math.ceil((pinBlockedUntil - Date.now()) / 1000)} seconds.`; return; }
+    pinEntry += digit; dom.lockMessage.textContent = ""; updatePinDots();
+    if (pinEntry.length !== 4) return;
+    pinChecking = true;
+    if (await verifyPin(pinEntry)) { unlockScreen(); return; }
+    failedPinAttempts += 1;
+    if (failedPinAttempts >= 5) { pinBlockedUntil = Date.now() + 30000; failedPinAttempts = 0; }
+    dom.lockScreen.classList.remove("error"); void dom.lockScreen.offsetWidth; dom.lockScreen.classList.add("error");
+    setTimeout(() => dom.lockScreen.classList.remove("error"), 300);
+    resetPinEntry(pinBlockedUntil > Date.now() ? "Too many attempts. Try again in 30 seconds." : "Incorrect PIN. Try again.");
+  }
+
+  function deletePinDigit() {
+    if (pinChecking || !pinEntry) return; pinEntry = pinEntry.slice(0, -1); dom.lockMessage.textContent = ""; updatePinDots();
   }
 
   function setCameraStatus(mode, label) {
@@ -555,6 +776,7 @@
   function stopCamera() {
     cameraStream?.getTracks?.().forEach(track => track.stop());
     cameraStream = null;
+    if (document.fullscreenElement === dom.cameraStage) document.exitFullscreen().catch(() => {});
     dom.cameraVideo.pause();
     dom.cameraVideo.srcObject = null;
     dom.cameraStage.classList.remove("streaming");
@@ -691,7 +913,7 @@
   }
 
   function importData(file) {
-    if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const imported = JSON.parse(String(reader.result)); state = normalizeState(imported); persist("Calendar restored"); renderAll(); } catch { showToast("That backup file could not be read", true); } }; reader.onerror = () => showToast("That backup file could not be read", true); reader.readAsText(file);
+    if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const imported = JSON.parse(String(reader.result)); state = normalizeState(imported); persist("Calendar restored"); renderAll(); applyNightMode(); } catch { showToast("That backup file could not be read", true); } }; reader.onerror = () => showToast("That backup file could not be read", true); reader.readAsText(file);
   }
 
   function bindEvents() {
@@ -705,8 +927,16 @@
     byId("photoInput").addEventListener("change", event => addPhotos(event.target.files));
     dom.eventForm.addEventListener("submit", saveEvent); dom.quickForm.addEventListener("submit", saveQuick); byId("deleteEvent").addEventListener("click", deleteCurrentEvent);
     document.querySelectorAll(".close-modal").forEach(button => button.addEventListener("click", () => button.closest("dialog").close()));
-    [dom.eventModal, dom.quickModal, dom.weatherModal].forEach(modal => modal.addEventListener("click", event => { if (event.target === modal) modal.close(); }));
+    [dom.eventModal, dom.quickModal, dom.weatherModal, dom.pinModal].forEach(modal => modal.addEventListener("click", event => { if (event.target === modal) modal.close(); }));
     byId("timeFormatToggle").addEventListener("click", () => { state.use24Hour = !state.use24Hour; persist(); updateClock(); renderAll(); });
+    dom.quickDim.addEventListener("click", toggleQuickDim); dom.dimWakeButton.addEventListener("click", wakeScreen);
+    dom.nightScheduleToggle.addEventListener("click", () => { state.nightMode.enabled = !state.nightMode.enabled; state.nightMode.wakeUntil = 0; state.manualDim = false; persist(state.nightMode.enabled ? "Night schedule enabled" : "Night schedule disabled"); applyNightMode(); updateNightControls(); });
+    [dom.nightStart, dom.nightEnd, dom.nightBrightness].forEach(control => control.addEventListener("change", saveNightSettings));
+    byId("configurePin").addEventListener("click", openPinModal); byId("lockNowSettings").addEventListener("click", lockScreenNow); byId("quickLock").addEventListener("click", lockScreenNow);
+    dom.lockAtNight.addEventListener("change", () => { lockState.lockAtNight = dom.lockAtNight.checked; persistLock(); updateLockSettings(); showToast(lockState.lockAtNight ? "Night locking enabled" : "Night locking disabled"); });
+    dom.pinForm.addEventListener("submit", savePin); byId("removePin").addEventListener("click", removePin);
+    document.querySelectorAll("[data-pin-digit]").forEach(button => button.addEventListener("click", () => enterPinDigit(button.dataset.pinDigit))); byId("pinDelete").addEventListener("click", deletePinDigit);
+    document.addEventListener("keydown", event => { if (!lockState.locked) return; if (/^\d$/.test(event.key)) { event.preventDefault(); enterPinDigit(event.key); } else if (event.key === "Backspace") { event.preventDefault(); deletePinDigit(); } });
     ["weatherLocationButton", "changeWeatherLocation"].forEach(id => byId(id).addEventListener("click", openWeatherModal));
     dom.weatherSearchForm.addEventListener("submit", searchWeatherLocations); byId("useCurrentLocation").addEventListener("click", useCurrentWeatherLocation);
     byId("openCameraSettings").addEventListener("click", () => showSection("cameras"));
@@ -716,11 +946,11 @@
     window.addEventListener("beforeunload", stopCamera);
     window.addEventListener("hashchange", () => { const section = window.location.hash.slice(1); if (["calendar", "cameras", "tasks", "shopping", "notes", "photos", "settings"].includes(section)) showSection(section, false); });
     byId("refreshWeather").addEventListener("click", () => loadWeather(true)); byId("exportData").addEventListener("click", exportData); byId("importDataButton").addEventListener("click", () => byId("importInput").click()); byId("importInput").addEventListener("change", event => importData(event.target.files[0]));
-    byId("resetData").addEventListener("click", () => { if (!window.confirm("Reset this device to the original Gilvarry sample calendar?")) return; state = defaultState(); selectedKey = perthDateKey(); viewDate = parseDateKey(selectedKey); persist("Sample calendar restored"); renderAll(); showSection("calendar"); });
+    byId("resetData").addEventListener("click", () => { if (!window.confirm("Reset this device to the original Gilvarry sample calendar?")) return; state = defaultState(); selectedKey = perthDateKey(); viewDate = parseDateKey(selectedKey); persist("Sample calendar restored"); renderAll(); applyNightMode(); showSection("calendar"); });
   }
 
   function init() {
-    cacheDom(); bindEvents(); updateClock(); renderAll(); const section = window.location.hash.slice(1); if (["cameras", "tasks", "shopping", "notes", "photos", "settings"].includes(section)) showSection(section, false); loadWeather(); populateCameraDevices(); setInterval(updateClock, 30000); setInterval(loadWeather, 1800000);
+    cacheDom(); bindEvents(); updateClock(); renderAll(); const section = window.location.hash.slice(1); if (["cameras", "tasks", "shopping", "notes", "photos", "settings"].includes(section)) showSection(section, false); if (lockState.locked) lockScreenNow(false); else document.documentElement.classList.remove("prelocked"); loadWeather(); populateCameraDevices(); setInterval(updateClock, 30000); setInterval(loadWeather, 1800000);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();

@@ -9,6 +9,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    try {
+      const saved = JSON.parse(localStorage.getItem("gilvarryWallCalendarV1") || "null");
+      const night = saved?.nightMode;
+      const now = new Date();
+      const zone = saved?.weather?.timezone && saved.weather.timezone !== "auto" ? saved.weather.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const clockParts = new Intl.DateTimeFormat("en-AU", { timeZone: zone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+      const minute = Number(clockParts.find(part => part.type === "hour")?.value || 0) * 60 + Number(clockParts.find(part => part.type === "minute")?.value || 0);
+      const toMinute = value => { const [hour, part] = String(value || "").split(":").map(Number); return hour * 60 + part; };
+      const start = toMinute(night?.start); const end = toMinute(night?.end);
+      const scheduled = night?.enabled && start !== end && (start < end ? minute >= start && minute < end : minute >= start || minute < end);
+      if (saved?.manualDim || scheduled) document.documentElement.classList.add("pre-dim");
+      const lock = JSON.parse(localStorage.getItem("gilvarryWallLockV1") || "null");
+      if (lock?.locked && lock?.hash && lock?.salt) document.documentElement.classList.add("prelocked");
+    } catch {}
+  </script>
   <link rel="stylesheet" href="styles.css">
   <title>Gilvarry Wall Calendar</title>
 </head>
@@ -137,6 +153,8 @@
           <div class="panel-heading"><div><span class="eyebrow">This device</span><h2 id="settingsTitle">Calendar Settings</h2></div></div>
           <div class="settings-grid">
             <article class="setting-card"><i data-lucide="clock-3"></i><div><strong>24-hour time</strong><small>Choose how times appear across the calendar.</small></div><button class="toggle" id="timeFormatToggle" type="button" role="switch" aria-checked="false"><span></span></button></article>
+            <article class="setting-card dimming-setting"><i data-lucide="moon-star"></i><div><strong>Night dimming schedule</strong><small id="nightScheduleSummary">Off · 18% screen level</small></div><button class="toggle" id="nightScheduleToggle" type="button" role="switch" aria-checked="false" aria-label="Enable night dimming schedule"><span></span></button><div class="schedule-fields"><label>Dim at<input id="nightStart" type="time" value="21:30"></label><label>Wake at<input id="nightEnd" type="time" value="06:30"></label><label>Screen level<select id="nightBrightness"><option value="10">10% · Very dark</option><option value="18">18% · Recommended</option><option value="30">30% · Soft</option><option value="40">40% · Bright</option></select></label></div></article>
+            <article class="setting-card lock-setting"><i data-lucide="lock-keyhole"></i><div><strong>Four-digit screen lock</strong><small id="lockSettingSummary">No PIN set · local display lock only.</small></div><div class="setting-actions"><button class="secondary-button" id="configurePin" type="button">Set PIN</button><button class="secondary-button" id="lockNowSettings" type="button" disabled>Lock now</button></div><label class="setting-checkbox"><input id="lockAtNight" type="checkbox" disabled><span>Lock when the night schedule begins</span></label></article>
             <article class="setting-card"><i data-lucide="map-pinned"></i><div><strong>Weather location</strong><small id="weatherSettingSummary">Perth, Western Australia · Refreshes every 30 minutes.</small></div><div class="setting-actions"><button class="secondary-button" id="changeWeatherLocation" type="button">Change</button><button class="secondary-button" id="refreshWeather" type="button">Refresh</button></div></article>
             <article class="setting-card"><i data-lucide="cctv"></i><div><strong>Concord HDMI capture</strong><small id="cameraSettingSummary">Connect the recorder through a USB capture dongle.</small></div><button class="secondary-button" id="openCameraSettings" type="button">Open camera</button></article>
             <article class="setting-card"><i data-lucide="download"></i><div><strong>Backup calendar</strong><small>Download events, lists, notes and settings.</small></div><button class="secondary-button" id="exportData" type="button">Export</button></article>
@@ -169,6 +187,8 @@
     <footer class="quick-bar" aria-label="Quick actions">
       <button class="quick-action home-action" data-section="calendar" type="button"><span><i data-lucide="house"></i></span><strong>Home<br>Dashboard</strong></button>
       <button class="quick-action camera-action" data-section="cameras" type="button"><span><i data-lucide="cctv"></i></span><strong>Live Cameras</strong></button>
+      <button class="quick-action dim-action" id="quickDim" type="button" aria-pressed="false"><span><i data-lucide="moon-star"></i></span><strong id="quickDimLabel">Dim Screen</strong></button>
+      <button class="quick-action lock-action" id="quickLock" type="button"><span><i data-lucide="lock-keyhole"></i></span><strong>Lock Screen</strong></button>
       <button class="quick-action event-action" id="quickAddEvent" type="button"><span><i data-lucide="calendar-plus"></i></span><strong>Add Event</strong></button>
       <button class="quick-action task-action" data-open-quick="task" type="button"><span><i data-lucide="list-checks"></i></span><strong>Add Task</strong></button>
       <button class="quick-action shop-action" data-open-quick="shopping" type="button"><span><i data-lucide="shopping-cart"></i></span><strong>Add to Shopping</strong></button>
@@ -177,6 +197,29 @@
       <div class="privacy-badge"><i data-lucide="badge-check"></i><p><strong>Private &amp; Secure</strong><span>This calendar is for our family only.<br>No accounts shared. No public access.</span></p></div>
     </footer>
   </main>
+
+  <section class="screen-dimmer" id="screenDimmer" aria-hidden="true">
+    <button class="dim-wake-button" id="dimWakeButton" type="button" disabled>
+      <i data-lucide="sun"></i><span class="dim-clock" id="dimClock">9:42 pm</span><strong>Tap anywhere to wake</strong><small id="dimStatus">Screen dimmed</small>
+    </button>
+  </section>
+
+  <section class="lock-screen" id="lockScreen" aria-labelledby="lockScreenTitle" aria-hidden="true" hidden>
+    <div class="lock-card">
+      <div class="lock-brand"><i data-lucide="house"></i><span>Gilvarry Family</span></div>
+      <p class="lock-time" id="lockClock">9:42 pm</p><p class="lock-date" id="lockDate">Monday, 14 September</p>
+      <i class="lock-symbol" data-lucide="lock-keyhole"></i><h2 id="lockScreenTitle">Screen locked</h2><p>Enter your four-digit PIN</p>
+      <div class="pin-dots" id="pinDots" aria-label="No PIN digits entered"><span></span><span></span><span></span><span></span></div>
+      <p class="pin-message" id="lockMessage" role="status" aria-live="polite"></p>
+      <div class="pin-keypad" aria-label="PIN keypad">
+        <button type="button" data-pin-digit="1">1</button><button type="button" data-pin-digit="2">2</button><button type="button" data-pin-digit="3">3</button>
+        <button type="button" data-pin-digit="4">4</button><button type="button" data-pin-digit="5">5</button><button type="button" data-pin-digit="6">6</button>
+        <button type="button" data-pin-digit="7">7</button><button type="button" data-pin-digit="8">8</button><button type="button" data-pin-digit="9">9</button>
+        <span></span><button type="button" data-pin-digit="0">0</button><button class="pin-delete" id="pinDelete" type="button" aria-label="Delete last digit"><i data-lucide="delete"></i></button>
+      </div>
+      <small class="lock-footnote">Local display lock · No cloud account or alternate sign-in</small>
+    </div>
+  </section>
 
   <dialog class="modal" id="eventModal" aria-labelledby="eventModalTitle">
     <form method="dialog" class="modal-card" id="eventForm">
@@ -208,6 +251,18 @@
       <button class="location-button" id="useCurrentLocation" type="button"><i data-lucide="navigation"></i><span><strong>Use my current location</strong><small>Uses the location permission on this monitor</small></span></button>
       <div class="location-results" id="weatherSearchResults" role="listbox" aria-label="Weather location results"></div>
       <p class="location-status" id="weatherSearchStatus" role="status" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="pinModal" aria-labelledby="pinModalTitle">
+    <form method="dialog" class="modal-card compact-modal" id="pinForm">
+      <div class="modal-heading"><div><span class="eyebrow">Local display security</span><h2 id="pinModalTitle">Set a four-digit PIN</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <p class="modal-intro">The PIN stays on this monitor. There is no account recovery, so keep it somewhere safe.</p>
+      <label id="currentPinLabel" hidden>Current PIN<input id="currentPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]{4}"></label>
+      <label>New four-digit PIN<input id="newPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" required></label>
+      <label>Confirm new PIN<input id="confirmPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" required></label>
+      <p class="pin-form-error" id="pinFormError" role="alert"></p>
+      <div class="modal-actions"><button class="secondary-button danger-button" id="removePin" type="button" hidden>Remove PIN</button><span></span><button class="secondary-button close-modal" type="button">Cancel</button><button class="primary-button" type="submit">Save PIN</button></div>
     </form>
   </dialog>
 

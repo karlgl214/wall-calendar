@@ -26,6 +26,16 @@ Open the published dashboard over HTTPS in a current version of Chrome or Edge, 
 
 The camera feed is never uploaded or recorded by the wall calendar. It goes directly from the USB capture device to the local browser, starts only after a user action, and stops when the user leaves the Camera screen or closes the page. Audio capture is deliberately disabled.
 
+## Night dimming and screen lock
+
+The bottom action bar includes **Dim Screen** for immediate low-light use. While dimmed, the display becomes a minimal dark clock; tapping anywhere wakes it. **Settings → Night dimming schedule** can enable automatic dimming, choose start and wake times, and select a 10%, 18%, 30%, or 40% screen level. The default preset is **9:30 pm to 6:30 am at 18%**, chosen for a 22-inch display in a dark room. The schedule runs in the open browser using the saved dashboard location’s time zone, so it needs no server or paid background service.
+
+**Settings → Four-digit screen lock** sets or changes a numeric PIN. After a PIN is configured, **Lock Screen** is available in the bottom bar and Settings. An optional setting locks the page when the night schedule begins. The lock screen has a large touchscreen keypad, supports physical number keys and Backspace, and pauses attempts for 30 seconds after five incorrect PINs.
+
+The PIN is never stored as plain text: the browser stores only a salted SHA-256 digest in this device’s local storage. The lock is intended to prevent casual access to the wall display; it is not a replacement for the computer’s operating-system login or full-disk security. There is deliberately no alternate sign-in or cloud recovery path, so the PIN should be kept somewhere safe.
+
+Entering dim mode or locking the page stops an active Concord capture stream and exits camera fullscreen so the display cannot continue playing bright video behind the night or lock layer.
+
 ## Hosting
 
 The project is compatible with GitHub Pages and other static hosts. Publish the repository root so `index.html` is the entry point.
@@ -53,3 +63,21 @@ The denied-permission path was simulated separately. It leaves the stream off, c
 Visual checks at **1920 × 1080** and **390 × 1000** confirmed that the dedicated dark camera view, source selector, controls, privacy notice, and seven-button navigation fit without horizontal overflow. The idle-state review also caught and corrected the live-indicator visibility so **LIVE** now appears only while a stream is active.
 
 The final `#cameras` deep link opens the Camera section directly with **Camera off**, no live badge, and the start/source controls available without first navigating through the calendar.
+
+The night and lock controls were browser-tested end to end. Manual dim/wake switched cleanly, an all-day test schedule applied the selected 10% level, and tapping the dim screen created a temporary wake override. A test PIN was stored only as a salted digest, locked the page, and unlocked with the correct four digits. Five incorrect entries kept the page locked and triggered the 30-second pause. Keypad buttons measured 96 × 68 pixels in the test viewport, and the complete view had no horizontal overflow.
+
+The locked state also survived a full page reload and restored the keypad before calendar access. The dim and lock clocks use the same configured location time zone as the main dashboard clock.
+
+After reloading the timezone-aligned build, the expanded Settings page and nine-button bottom action bar remained fully visible at the browser test viewport with no horizontal overflow.
+
+A fresh PIN-and-lock test confirmed that the main dashboard and lock page both displayed **10:09 pm** for the saved Perth time zone, after which the temporary test PIN was removed successfully.
+
+Exact **1920 × 1080** renders confirmed that the expanded Settings page fits the 22-inch layout, the 18% dim state remains readable without glare, and the lock screen presents a centered, uncluttered keypad with large touch targets.
+
+The clean-state reload used after security testing returned to **No PIN set** with both lock actions disabled, confirming that the temporary QA credential did not remain on the test device.
+
+The optional **Lock when the night schedule begins** flow was tested separately: schedule entry simultaneously dimmed and locked the page, the first tap woke the display without bypassing the lock, and the correct PIN then unlocked it. A final control audit identified the original 30-pixel switch as too small for touch use, so all settings switches were enlarged to 60 × 44 pixels.
+
+The closing browser audit found no enabled night or lock control below 44 pixels, no horizontal overflow, no active dim state, and no residual test PIN in local storage.
+
+PIN management was also verified: an incorrect current PIN blocked a change, the correct current PIN allowed replacement, the replacement PIN unlocked the screen, and PIN removal disabled both lock actions without storing either test PIN. The final **1920 × 1080** Settings render shows the corrected switches and all controls without clipping.
