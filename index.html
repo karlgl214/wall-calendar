@@ -3,271 +3,149 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b1e35">
-  <meta name="description" content="The private Gilvarry family wall calendar for events, tasks, shopping, notes and photos.">
+  <meta name="theme-color" content="#061426">
+  <meta name="description" content="Cleo AI Owner Control Centre — a private, secure system-monitoring dashboard.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script>
-    try {
-      const saved = JSON.parse(localStorage.getItem("gilvarryWallCalendarV1") || "null");
-      const night = saved?.nightMode;
-      const now = new Date();
-      const zone = saved?.weather?.timezone && saved.weather.timezone !== "auto" ? saved.weather.timezone : Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const clockParts = new Intl.DateTimeFormat("en-AU", { timeZone: zone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
-      const minute = Number(clockParts.find(part => part.type === "hour")?.value || 0) * 60 + Number(clockParts.find(part => part.type === "minute")?.value || 0);
-      const toMinute = value => { const [hour, part] = String(value || "").split(":").map(Number); return hour * 60 + part; };
-      const start = toMinute(night?.start); const end = toMinute(night?.end);
-      const scheduled = night?.enabled && start !== end && (start < end ? minute >= start && minute < end : minute >= start || minute < end);
-      if (saved?.manualDim || scheduled) document.documentElement.classList.add("pre-dim");
-      const lock = JSON.parse(localStorage.getItem("gilvarryWallLockV1") || "null");
-      if (lock?.locked && lock?.hash && lock?.salt) document.documentElement.classList.add("prelocked");
-    } catch {}
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <title>Gilvarry Wall Calendar</title>
+  <title>Cleo AI — Owner Control Centre</title>
 </head>
 <body>
-  <a class="skip-link" href="#calendarWorkspace">Skip to calendar</a>
-  <div class="ambient ambient-one"></div>
-  <div class="ambient ambient-two"></div>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <div class="scan-lines" aria-hidden="true"></div>
 
-  <main class="wall-shell" aria-label="Gilvarry family wall calendar">
-    <header class="hero" id="home">
-      <div class="hero-overlay"></div>
-      <section class="brand-block" aria-label="Calendar name">
-        <div class="brand-title"><i data-lucide="house"></i><h1>Our Family Calendar</h1></div>
-        <p class="family-name">GILVARRY · FAMILY · HOME</p>
-        <p class="hero-script">Same home. Brighter days. <span aria-hidden="true">♡</span></p>
-      </section>
+  <main class="control-shell" aria-label="Cleo AI Owner Control Centre">
+    <header class="topbar">
+      <a class="brand" href="#dashboard" aria-label="Cleo AI dashboard">
+        <span class="brand-mark" aria-hidden="true"><span class="brand-face"></span><i></i><i></i><i></i></span>
+        <span><strong>CLEO <em>AI</em></strong><small>PRIVATE · SECURE · YOURS</small></span>
+      </a>
 
-      <section class="time-block" aria-label="Current time and date">
-        <div class="clock" id="clock">7:42 <span>PM</span></div>
-        <div class="full-date" id="fullDate">Mon, 14 September 2026</div>
-      </section>
+      <div class="page-title">
+        <span class="eyebrow">OWNER CONTROL CENTRE</span>
+        <p>Monitoring. Maintaining. Keeping Cleo Healthy.</p>
+      </div>
 
-      <p class="hero-quote">Good things<br>happen at home <span aria-hidden="true">♡</span></p>
-
-      <section class="weather-card" id="weatherWidget" aria-label="Weather">
-        <div class="weather-now">
-          <button class="weather-location" id="weatherLocationButton" type="button" aria-label="Change weather location"><i data-lucide="map-pin"></i><span id="weatherLocationName">Perth</span></button>
-          <div class="weather-reading"><strong id="weatherTemp">18°C</strong><b id="weatherCurrentIcon" aria-hidden="true">☀️</b></div>
-          <small id="weatherText">Clear</small>
-          <div class="weather-meta"><span><i data-lucide="droplets"></i><b id="weatherHumidity">--%</b></span><span><i data-lucide="wind"></i><b id="weatherWind">-- km/h</b></span></div>
-        </div>
-        <div class="forecast" id="forecast" aria-live="polite">
-          <div><span>Tue</span><b>☀️</b><small>24° <em>12°</em></small></div>
-          <div><span>Wed</span><b>⛅</b><small>22° <em>13°</em></small></div>
-          <div><span>Thu</span><b>☀️</b><small>25° <em>14°</em></small></div>
-        </div>
-      </section>
+      <div class="owner-actions">
+        <div class="owner-copy"><small>Good <span id="greeting">evening</span></small><strong>Owner</strong></div>
+        <button class="icon-button" id="settingsButton" type="button" aria-label="Open settings"><i data-lucide="settings-2"></i></button>
+        <div class="clock-block"><small id="dateNow">Sat 26 Apr 2025</small><strong id="clockNow">19:42</strong></div>
+      </div>
     </header>
 
-    <div class="dashboard-grid">
-      <aside class="sidebar" aria-label="Family and navigation">
-        <div class="privacy-intro">
-          <i data-lucide="lock-keyhole"></i>
-          <div><strong>Private Calendar</strong><small>Only the Gilvarry family can access this device.</small></div>
-        </div>
-
-        <div class="family-switcher" role="group" aria-label="Active family member">
-          <button class="member active" data-member="Karl" type="button"><span class="avatar avatar-k">K</span><span>Karl</span></button>
-          <button class="member" data-member="Mum" type="button"><span class="avatar avatar-m">M</span><span>Mum</span></button>
-          <button class="member" data-member="Dad" type="button"><span class="avatar avatar-d">D</span><span>Dad</span></button>
-        </div>
-
-        <nav class="side-nav" aria-label="Calendar sections">
-          <button class="nav-item active" data-section="calendar" type="button"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
-          <button class="nav-item" data-section="cameras" type="button"><i data-lucide="cctv"></i><span>Cameras</span></button>
-          <button class="nav-item" data-section="tasks" type="button"><i data-lucide="square-check-big"></i><span>Tasks</span><b id="taskBadge">0</b></button>
-          <button class="nav-item" data-section="shopping" type="button"><i data-lucide="shopping-cart"></i><span>Shopping</span><b id="shopBadge">0</b></button>
-          <button class="nav-item" data-section="notes" type="button"><i data-lucide="notebook-text"></i><span>Notes</span></button>
-          <button class="nav-item" data-section="photos" type="button"><i data-lucide="image"></i><span>Photos</span></button>
-          <button class="nav-item" data-section="settings" type="button"><i data-lucide="settings"></i><span>Settings</span></button>
+    <div class="app-grid">
+      <aside class="sidebar">
+        <nav class="side-nav" aria-label="Control Centre sections">
+          <button class="nav-item active" data-section="Dashboard" type="button"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
+          <button class="nav-item" data-section="Users" type="button"><i data-lucide="users-round"></i><span>Users</span></button>
+          <button class="nav-item" data-section="Cleo AI" type="button"><i data-lucide="sparkles"></i><span>Cleo AI</span></button>
+          <button class="nav-item" data-section="Hardware" type="button"><i data-lucide="monitor-cog"></i><span>Hardware</span></button>
+          <button class="nav-item" data-section="Storage" type="button"><i data-lucide="hard-drive"></i><span>Storage</span></button>
+          <button class="nav-item" data-section="Network" type="button"><i data-lucide="wifi"></i><span>Network</span></button>
+          <button class="nav-item" data-section="Security" type="button"><i data-lucide="shield-check"></i><span>Security</span></button>
+          <button class="nav-item" data-section="Maintenance" type="button"><i data-lucide="wrench"></i><span>Maintenance</span></button>
+          <button class="nav-item" data-section="Alerts" type="button"><i data-lucide="triangle-alert"></i><span>Alerts</span><b class="alert-count">2</b></button>
+          <button class="nav-item" data-section="Settings" type="button"><i data-lucide="settings"></i><span>Settings</span></button>
         </nav>
-
-        <p class="sidebar-script">Home is everything <span aria-hidden="true">♡</span></p>
+        <div class="sidebar-footer">
+          <span class="quote-line"></span>
+          <p>“A kinder<br>smarter tomorrow<br>— together”</p>
+          <div class="mini-brand"><span class="mini-orbit"><i></i></span><strong>CLEO <em>AI</em></strong></div>
+        </div>
       </aside>
 
-      <section class="workspace" id="calendarWorkspace" aria-live="polite">
-        <div id="calendarSection" class="section-panel active">
-          <div class="calendar-toolbar">
-            <div class="month-navigation">
-              <button class="icon-button" id="previousPeriod" type="button" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
-              <h2 id="periodTitle">September 2026</h2>
-              <button class="icon-button" id="nextPeriod" type="button" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
-              <button class="today-button" id="todayButton" type="button">Today</button>
-            </div>
-            <div class="view-switcher" role="group" aria-label="Calendar view">
-              <button class="active" data-calendar-view="month" type="button">Month</button>
-              <button data-calendar-view="week" type="button">Week</button>
-              <button data-calendar-view="day" type="button">Day</button>
-            </div>
-          </div>
-          <div id="calendarView"></div>
+      <section class="dashboard" id="dashboard" aria-live="polite">
+        <div class="section-heading">
+          <div><span class="eyebrow">LIVE OVERVIEW</span><h1 id="sectionTitle">Cleo Health Overview</h1></div>
+          <button class="sync-button" id="scanButton" type="button"><i data-lucide="rotate-cw"></i><span id="scanLabel">Run health check</span></button>
         </div>
 
-        <section id="camerasSection" class="section-panel camera-panel" aria-labelledby="camerasTitle">
-          <div class="camera-toolbar">
-            <div><span class="eyebrow">Concord CNK884P-A</span><h2 id="camerasTitle">Security Cameras</h2></div>
-            <div class="camera-status" id="cameraStatus" data-state="idle"><span></span><strong>Camera off</strong></div>
-          </div>
-          <div class="camera-stage" id="cameraStage">
-            <video id="cameraVideo" playsinline muted aria-label="Live Concord security camera feed"></video>
-            <div class="camera-placeholder" id="cameraPlaceholder"><i data-lucide="video"></i><h3 id="cameraPlaceholderTitle">HDMI capture ready</h3><p id="cameraPlaceholderText">Connect the Concord recorder’s HDMI output to a USB capture dongle, then tap <strong>Start live view</strong>.</p></div>
-            <div class="live-badge" id="cameraLiveBadge" hidden><span></span>LIVE</div>
-          </div>
-          <div class="camera-controls">
-            <label class="camera-source"><span>Video source</span><select id="cameraSource" aria-label="Video source"><option value="">Default camera or capture device</option></select></label>
-            <button class="primary-button" id="startCamera" type="button"><i data-lucide="play"></i>Start live view</button>
-            <button class="secondary-button" id="stopCamera" type="button" disabled><i data-lucide="square"></i>Stop</button>
-            <button class="secondary-button" id="fullscreenCamera" type="button" disabled><i data-lucide="maximize"></i>Fullscreen</button>
-          </div>
-          <div class="camera-help"><i data-lucide="shield-check"></i><p><strong>Local and private.</strong> Video travels only from the USB capture device to this browser. It is not uploaded to the website or stored by the calendar.</p></div>
+        <section class="overview-cards" aria-label="System overview">
+          <article class="panel health-card" id="healthCard">
+            <div class="panel-label"><i data-lucide="activity"></i><span>System Health</span></div>
+            <div class="health-body"><span class="health-orb"><i data-lucide="check"></i></span><div><strong id="healthState">HEALTHY</strong><p id="healthCopy">All core systems operational.</p></div></div>
+          </article>
+
+          <article class="panel users-card">
+            <div class="panel-label"><i data-lucide="users-round"></i><span>Users</span></div>
+            <div class="stat-pair"><div><strong>5</strong><span>Registered Users</span></div><div class="online-stat"><strong id="onlineCount">2</strong><span>Online Now</span></div></div>
+          </article>
+
+          <article class="panel uptime-card">
+            <div class="panel-label"><i data-lucide="timer"></i><span>Cleo Uptime</span></div>
+            <div class="uptime-body"><span class="uptime-icon"><i data-lucide="clock-3"></i></span><div><strong>16 days 08 hours</strong><p>Since 10 Apr 2025, 11:34</p></div></div>
+          </article>
         </section>
 
-        <section id="tasksSection" class="section-panel manager-panel" aria-labelledby="tasksTitle">
-          <div class="panel-heading"><div><span class="eyebrow">Make the day lighter</span><h2 id="tasksTitle">Family Tasks</h2></div><button class="primary-button" data-open-quick="task" type="button"><i data-lucide="plus"></i>Add task</button></div>
-          <div class="progress-card"><div><strong id="taskProgressLabel">0 of 0 complete</strong><span>Today’s family progress</span></div><div class="progress-track"><span id="taskProgressBar"></span></div></div>
-          <div class="manager-list" id="taskManagerList"></div>
+        <section class="main-dashboard-grid">
+          <article class="panel user-table-panel">
+            <div class="panel-header"><div><span class="eyebrow">ACCESS CONTROL</span><h2>Users <span>(5)</span></h2></div><button class="text-button" id="usersToggle" type="button">View All <i data-lucide="chevron-right"></i></button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>First Name</th><th>Last Name</th><th>Email <span>(masked)</span></th><th>Status</th><th>Last Connection</th></tr></thead>
+                <tbody id="usersTable">
+                  <tr><td>1</td><td>Sarah</td><td>Green</td><td>ssg•••••••@me.com</td><td><span class="status online"><i></i>Online</span></td><td>Today 19:42</td></tr>
+                  <tr><td>2</td><td>James</td><td>Carter</td><td>jac•••••••@me.com</td><td><span class="status online"><i></i>Online</span></td><td>Today 18:21</td></tr>
+                  <tr><td>3</td><td>Emma</td><td>Wilson</td><td>emw•••••••@me.com</td><td><span class="status offline"><i></i>Offline</span></td><td>25 Apr 2025</td></tr>
+                  <tr><td>4</td><td>Daniel</td><td>Brooks</td><td>dab•••••••@me.com</td><td><span class="status online"><i></i>Online</span></td><td>Today 17:03</td></tr>
+                  <tr><td>5</td><td>Olivia</td><td>Parker</td><td>olp•••••••@me.com</td><td><span class="status offline"><i></i>Offline</span></td><td>24 Apr 2025</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel cleo-card">
+            <div class="cleo-visual" aria-hidden="true"><div class="hologram-ring ring-one"></div><div class="hologram-ring ring-two"></div><div class="cleo-avatar"><span class="avatar-glow"></span><span class="avatar-head"></span><span class="avatar-neck"></span><span class="avatar-hair"></span></div><div class="stars"><i></i><i></i><i></i><i></i><i></i></div></div>
+            <div class="cleo-info"><h2>Cleo AI</h2><span class="status online"><i></i>Online</span><ul><li><i data-lucide="check-circle-2"></i>Model Loaded</li><li><i data-lucide="check-circle-2"></i>Response Service Healthy</li><li><i data-lucide="check-circle-2"></i>All Systems Operational</li></ul><blockquote>“Here to help,<br>today and always.”</blockquote></div>
+          </article>
         </section>
 
-        <section id="shoppingSection" class="section-panel manager-panel" aria-labelledby="shoppingTitle">
-          <div class="panel-heading"><div><span class="eyebrow">One shared list</span><h2 id="shoppingTitle">Shopping List</h2></div><button class="primary-button" data-open-quick="shopping" type="button"><i data-lucide="plus"></i>Add item</button></div>
-          <div class="manager-list" id="shoppingManagerList"></div>
+        <section class="metrics-grid" aria-label="Hardware and service metrics">
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="cpu"></i></div><div><span>CPU</span><strong class="accent-green">48°C</strong><small><b>27%</b> Load</small></div><div class="meter"><i style="--level:27%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="microchip"></i></div><div><span>GPU</span><strong class="accent-green">61°C</strong><small><b>43%</b> Load</small></div><div class="meter"><i style="--level:43%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="memory-stick"></i></div><div><span>VRAM</span><strong class="accent-blue">9.2 <small>/ 16 GB</small></strong></div><div class="meter"><i style="--level:57%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="memory-stick"></i></div><div><span>RAM</span><strong class="accent-blue">31 <small>/ 64 GB</small></strong></div><div class="meter"><i style="--level:48%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="hard-drive"></i></div><div><span>Storage <small>(NVMe)</small></span><strong class="accent-amber">82%</strong><small>Estimated Life Remaining</small></div><div class="meter amber"><i style="--level:70%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="database"></i></div><div><span>Storage Capacity</span><strong class="accent-blue">1.24 TB <small>free</small></strong><small>of 2.00 TB</small></div><div class="meter"><i style="--level:62%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="fan"></i></div><div><span>Cooling</span><strong class="accent-green small-strong">All Fans OK</strong><small>Average 1,240 RPM</small></div><div class="meter green"><i style="--level:48%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="globe-2"></i></div><div><span>Network</span><strong class="accent-green small-strong">Connected</strong><small>↓ 12.4 Mbps&nbsp;&nbsp;↑ 4.8 Mbps</small></div><div class="meter"><i style="--level:23%"></i></div></article>
+          <article class="metric-card"><div class="metric-icon"><i data-lucide="battery-charging"></i></div><div><span>Power <small>(UPS)</small></span><strong class="accent-green small-strong">Online</strong><small>Battery: 92%</small></div><div class="meter green"><i style="--level:92%"></i></div></article>
         </section>
 
-        <section id="notesSection" class="section-panel manager-panel" aria-labelledby="notesTitle">
-          <div class="panel-heading"><div><span class="eyebrow">Remember together</span><h2 id="notesTitle">Family Notes</h2></div><button class="primary-button" data-open-quick="note" type="button"><i data-lucide="plus"></i>Add note</button></div>
-          <div class="notes-board" id="notesBoard"></div>
+        <section class="bottom-grid">
+          <article class="panel maintenance-panel">
+            <div class="panel-header"><div><span class="eyebrow">SCHEDULED CARE</span><h2>Maintenance</h2></div><span class="header-note">Service Estimate</span></div>
+            <div class="maintenance-list">
+              <div><span class="service-icon"><i data-lucide="fan"></i></span><strong>CPU Cooling</strong><span class="status online"><i></i>OK</span><small>—</small></div>
+              <div><span class="service-icon"><i data-lucide="monitor-cog"></i></span><strong>GPU</strong><span class="status online"><i></i>OK</span><small>—</small></div>
+              <div><span class="service-icon warning"><i data-lucide="hard-drive"></i></span><strong>NVMe SSD</strong><span class="status warning"><i></i>Wear increasing; monitor</span><small>Monitor</small></div>
+              <div><span class="service-icon warning"><i data-lucide="battery-medium"></i></span><strong>UPS Battery</strong><span class="status warning"><i></i>Test within 30 days</span><small>Within 30 days</small></div>
+              <div><span class="service-icon critical"><i data-lucide="fan"></i></span><strong>Case Fan #3</strong><span class="status critical"><i></i>RPM below expected range</span><small>Replace soon</small></div>
+            </div>
+          </article>
+
+          <article class="panel alerts-panel">
+            <div class="panel-header"><div><span class="eyebrow">SYSTEM FEED</span><h2>Recent Alerts</h2></div><button class="text-button" id="alertsToggle" type="button">View All <i data-lucide="chevron-right"></i></button></div>
+            <div class="alerts-list" id="alertsList">
+              <div class="alert-row priority"><span><i data-lucide="siren"></i></span><p>Case Fan #3 RPM below expected range</p><time>Today 14:32</time></div>
+              <div class="alert-row warning"><span><i data-lucide="triangle-alert"></i></span><p>NVMe SSD wear at 82%</p><time>Today 10:11</time></div>
+              <div class="alert-row info"><span><i data-lucide="user-check"></i></span><p>User login (James Carter)</p><time>Today 09:03</time></div>
+              <div class="alert-row info"><span><i data-lucide="info"></i></span><p>System health check completed</p><time>Today 02:00</time></div>
+              <div class="alert-row info hidden-alert"><span><i data-lucide="brain-circuit"></i></span><p>Cleo AI model reloaded (routine)</p><time>Yesterday 23:15</time></div>
+              <div class="alert-row info hidden-alert"><span><i data-lucide="shield-check"></i></span><p>Security scan completed</p><time>Yesterday 21:06</time></div>
+            </div>
+          </article>
         </section>
 
-        <section id="photosSection" class="section-panel manager-panel" aria-labelledby="photosTitle">
-          <div class="panel-heading"><div><span class="eyebrow">Moments from home</span><h2 id="photosTitle">Family Photos</h2></div><button class="primary-button" id="uploadPhotoButton" type="button"><i data-lucide="image-plus"></i>Add photos</button></div>
-          <input class="visually-hidden" id="photoInput" type="file" accept="image/*" multiple>
-          <div class="photo-grid" id="photoGrid"></div>
-        </section>
-
-        <section id="settingsSection" class="section-panel manager-panel" aria-labelledby="settingsTitle">
-          <div class="panel-heading"><div><span class="eyebrow">This device</span><h2 id="settingsTitle">Calendar Settings</h2></div></div>
-          <div class="settings-grid">
-            <article class="setting-card"><i data-lucide="clock-3"></i><div><strong>24-hour time</strong><small>Choose how times appear across the calendar.</small></div><button class="toggle" id="timeFormatToggle" type="button" role="switch" aria-checked="false"><span></span></button></article>
-            <article class="setting-card dimming-setting"><i data-lucide="moon-star"></i><div><strong>Night dimming schedule</strong><small id="nightScheduleSummary">Off · 18% screen level</small></div><button class="toggle" id="nightScheduleToggle" type="button" role="switch" aria-checked="false" aria-label="Enable night dimming schedule"><span></span></button><div class="schedule-fields"><label>Dim at<input id="nightStart" type="time" value="21:30"></label><label>Wake at<input id="nightEnd" type="time" value="06:30"></label><label>Screen level<select id="nightBrightness"><option value="10">10% · Very dark</option><option value="18">18% · Recommended</option><option value="30">30% · Soft</option><option value="40">40% · Bright</option></select></label></div></article>
-            <article class="setting-card lock-setting"><i data-lucide="lock-keyhole"></i><div><strong>Four-digit screen lock</strong><small id="lockSettingSummary">No PIN set · local display lock only.</small></div><div class="setting-actions"><button class="secondary-button" id="configurePin" type="button">Set PIN</button><button class="secondary-button" id="lockNowSettings" type="button" disabled>Lock now</button></div><label class="setting-checkbox"><input id="lockAtNight" type="checkbox" disabled><span>Lock when the night schedule begins</span></label></article>
-            <article class="setting-card"><i data-lucide="map-pinned"></i><div><strong>Weather location</strong><small id="weatherSettingSummary">Perth, Western Australia · Refreshes every 30 minutes.</small></div><div class="setting-actions"><button class="secondary-button" id="changeWeatherLocation" type="button">Change</button><button class="secondary-button" id="refreshWeather" type="button">Refresh</button></div></article>
-            <article class="setting-card"><i data-lucide="cctv"></i><div><strong>Concord HDMI capture</strong><small id="cameraSettingSummary">Connect the recorder through a USB capture dongle.</small></div><button class="secondary-button" id="openCameraSettings" type="button">Open camera</button></article>
-            <article class="setting-card"><i data-lucide="download"></i><div><strong>Backup calendar</strong><small>Download events, lists, notes and settings.</small></div><button class="secondary-button" id="exportData" type="button">Export</button></article>
-            <article class="setting-card"><i data-lucide="upload"></i><div><strong>Restore backup</strong><small>Import a Gilvarry calendar backup file.</small></div><button class="secondary-button" id="importDataButton" type="button">Import</button><input class="visually-hidden" id="importInput" type="file" accept="application/json,.json"></article>
-            <article class="setting-card"><i data-lucide="shield-check"></i><div><strong>Private by design</strong><small>Your calendar stays in this browser and is not sent to an account.</small></div><span class="status-pill">Protected</span></article>
-            <article class="setting-card danger-card"><i data-lucide="rotate-ccw"></i><div><strong>Reset sample calendar</strong><small>Restore the original Gilvarry sample data on this device.</small></div><button class="secondary-button danger-button" id="resetData" type="button">Reset</button></article>
-          </div>
-        </section>
+        <footer class="dashboard-footer"><i data-lucide="shield-check"></i> Built for People. Not Data Mining. <span>•</span> Cleo AI Private Environment</footer>
       </section>
-
-      <aside class="right-rail" aria-label="Daily overview">
-        <section class="rail-card today-card">
-          <div class="rail-heading"><h2 id="agendaHeading">Today</h2><span id="agendaDate">Mon, 14 September</span></div>
-          <div class="agenda-list" id="agendaList"></div>
-          <button class="rail-link" id="addAgendaEvent" type="button"><i data-lucide="plus"></i>Add event</button>
-        </section>
-
-        <section class="rail-card list-card">
-          <div class="rail-heading"><h2><i data-lucide="shopping-cart"></i>Shopping List</h2><button class="square-add" data-open-quick="shopping" type="button" aria-label="Add shopping item"><i data-lucide="plus"></i></button></div>
-          <div class="mini-list" id="shoppingMiniList"></div>
-        </section>
-
-        <section class="rail-card list-card notes-card">
-          <div class="rail-heading"><h2><i data-lucide="notebook-text"></i>Notes</h2><button class="square-add" data-open-quick="note" type="button" aria-label="Add note"><i data-lucide="plus"></i></button></div>
-          <div class="mini-list" id="notesMiniList"></div>
-        </section>
-      </aside>
     </div>
-
-    <footer class="quick-bar" aria-label="Quick actions">
-      <button class="quick-action home-action" data-section="calendar" type="button"><span><i data-lucide="house"></i></span><strong>Home<br>Dashboard</strong></button>
-      <button class="quick-action camera-action" data-section="cameras" type="button"><span><i data-lucide="cctv"></i></span><strong>Live Cameras</strong></button>
-      <button class="quick-action dim-action" id="quickDim" type="button" aria-pressed="false"><span><i data-lucide="moon-star"></i></span><strong id="quickDimLabel">Dim Screen</strong></button>
-      <button class="quick-action lock-action" id="quickLock" type="button"><span><i data-lucide="lock-keyhole"></i></span><strong>Lock Screen</strong></button>
-      <button class="quick-action event-action" id="quickAddEvent" type="button"><span><i data-lucide="calendar-plus"></i></span><strong>Add Event</strong></button>
-      <button class="quick-action task-action" data-open-quick="task" type="button"><span><i data-lucide="list-checks"></i></span><strong>Add Task</strong></button>
-      <button class="quick-action shop-action" data-open-quick="shopping" type="button"><span><i data-lucide="shopping-cart"></i></span><strong>Add to Shopping</strong></button>
-      <button class="quick-action photo-action" id="quickAddPhoto" type="button"><span><i data-lucide="image-plus"></i></span><strong>Add Photo</strong></button>
-      <button class="quick-action settings-action" data-section="settings" type="button"><span><i data-lucide="settings"></i></span><strong>Settings</strong></button>
-      <div class="privacy-badge"><i data-lucide="badge-check"></i><p><strong>Private &amp; Secure</strong><span>This calendar is for our family only.<br>No accounts shared. No public access.</span></p></div>
-    </footer>
   </main>
 
-  <section class="screen-dimmer" id="screenDimmer" aria-hidden="true">
-    <button class="dim-wake-button" id="dimWakeButton" type="button" disabled>
-      <i data-lucide="sun"></i><span class="dim-clock" id="dimClock">9:42 pm</span><strong>Tap anywhere to wake</strong><small id="dimStatus">Screen dimmed</small>
-    </button>
-  </section>
-
-  <section class="lock-screen" id="lockScreen" aria-labelledby="lockScreenTitle" aria-hidden="true" hidden>
-    <div class="lock-card">
-      <div class="lock-brand"><i data-lucide="house"></i><span>Gilvarry Family</span></div>
-      <p class="lock-time" id="lockClock">9:42 pm</p><p class="lock-date" id="lockDate">Monday, 14 September</p>
-      <i class="lock-symbol" data-lucide="lock-keyhole"></i><h2 id="lockScreenTitle">Screen locked</h2><p>Enter your four-digit PIN</p>
-      <div class="pin-dots" id="pinDots" aria-label="No PIN digits entered"><span></span><span></span><span></span><span></span></div>
-      <p class="pin-message" id="lockMessage" role="status" aria-live="polite"></p>
-      <div class="pin-keypad" aria-label="PIN keypad">
-        <button type="button" data-pin-digit="1">1</button><button type="button" data-pin-digit="2">2</button><button type="button" data-pin-digit="3">3</button>
-        <button type="button" data-pin-digit="4">4</button><button type="button" data-pin-digit="5">5</button><button type="button" data-pin-digit="6">6</button>
-        <button type="button" data-pin-digit="7">7</button><button type="button" data-pin-digit="8">8</button><button type="button" data-pin-digit="9">9</button>
-        <span></span><button type="button" data-pin-digit="0">0</button><button class="pin-delete" id="pinDelete" type="button" aria-label="Delete last digit"><i data-lucide="delete"></i></button>
-      </div>
-      <small class="lock-footnote">Local display lock · No cloud account or alternate sign-in</small>
-    </div>
-  </section>
-
-  <dialog class="modal" id="eventModal" aria-labelledby="eventModalTitle">
-    <form method="dialog" class="modal-card" id="eventForm">
-      <div class="modal-heading"><div><span class="eyebrow">Family calendar</span><h2 id="eventModalTitle">Add an event</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>
-      <input id="eventId" type="hidden">
-      <label>Event name<input id="eventTitle" type="text" maxlength="80" placeholder="e.g. Dinner with Mum & Dad" required></label>
-      <div class="form-row"><label>Date<input id="eventDate" type="date" required></label><label>Time<input id="eventTime" type="time"></label></div>
-      <div class="form-row"><label>Family member<select id="eventMember"><option>Karl</option><option>Mum</option><option>Dad</option><option>Everyone</option></select></label><label>Type<select id="eventCategory"><option value="family">Family</option><option value="health">Health</option><option value="home">Home</option><option value="shopping">Shopping</option><option value="birthday">Birthday</option><option value="outing">Outing</option></select></label></div>
-      <label>Details<textarea id="eventDetails" maxlength="160" placeholder="Optional details"></textarea></label>
-      <div class="modal-actions"><button class="secondary-button" id="deleteEvent" type="button" hidden>Delete</button><span></span><button class="secondary-button close-modal" type="button">Cancel</button><button class="primary-button" type="submit">Save event</button></div>
-    </form>
-  </dialog>
-
-  <dialog class="modal" id="quickModal" aria-labelledby="quickModalTitle">
-    <form method="dialog" class="modal-card compact-modal" id="quickForm">
-      <div class="modal-heading"><div><span class="eyebrow">Quick add</span><h2 id="quickModalTitle">Add an item</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>
-      <input id="quickType" type="hidden">
-      <label id="quickTextLabel">Name<input id="quickText" type="text" maxlength="120" required></label>
-      <label id="quickOwnerLabel">For<select id="quickOwner"><option>Karl</option><option>Mum</option><option>Dad</option><option>Everyone</option></select></label>
-      <div class="modal-actions"><span></span><span></span><button class="secondary-button close-modal" type="button">Cancel</button><button class="primary-button" type="submit">Add</button></div>
-    </form>
-  </dialog>
-
-  <dialog class="modal" id="weatherModal" aria-labelledby="weatherModalTitle">
-    <form method="dialog" class="modal-card" id="weatherSearchForm">
-      <div class="modal-heading"><div><span class="eyebrow">Live weather</span><h2 id="weatherModalTitle">Choose a location</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>
-      <p class="modal-intro">Search for a city or postcode, or use this monitor’s current location. Your choice is saved only on this device.</p>
-      <div class="location-search-row"><label class="visually-hidden" for="weatherSearchInput">City or postcode</label><input id="weatherSearchInput" type="search" minlength="2" maxlength="80" placeholder="City or postcode" autocomplete="off" required><button class="primary-button" id="weatherSearchButton" type="submit"><i data-lucide="search"></i>Search</button></div>
-      <button class="location-button" id="useCurrentLocation" type="button"><i data-lucide="navigation"></i><span><strong>Use my current location</strong><small>Uses the location permission on this monitor</small></span></button>
-      <div class="location-results" id="weatherSearchResults" role="listbox" aria-label="Weather location results"></div>
-      <p class="location-status" id="weatherSearchStatus" role="status" aria-live="polite"></p>
-    </form>
-  </dialog>
-
-  <dialog class="modal" id="pinModal" aria-labelledby="pinModalTitle">
-    <form method="dialog" class="modal-card compact-modal" id="pinForm">
-      <div class="modal-heading"><div><span class="eyebrow">Local display security</span><h2 id="pinModalTitle">Set a four-digit PIN</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div>
-      <p class="modal-intro">The PIN stays on this monitor. There is no account recovery, so keep it somewhere safe.</p>
-      <label id="currentPinLabel" hidden>Current PIN<input id="currentPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" pattern="[0-9]{4}"></label>
-      <label>New four-digit PIN<input id="newPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" required></label>
-      <label>Confirm new PIN<input id="confirmPin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="4" pattern="[0-9]{4}" required></label>
-      <p class="pin-form-error" id="pinFormError" role="alert"></p>
-      <div class="modal-actions"><button class="secondary-button danger-button" id="removePin" type="button" hidden>Remove PIN</button><span></span><button class="secondary-button close-modal" type="button">Cancel</button><button class="primary-button" type="submit">Save PIN</button></div>
-    </form>
-  </dialog>
-
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
   <script src="app.js"></script>
 </body>
