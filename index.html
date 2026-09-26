@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#061426">
-  <meta name="description" content="Cleo AI Owner Control Centre — a private, secure system-monitoring dashboard.">
+  <meta name="description" content="Cleo AI Owner Control Centre — a private, secure Linux system-monitoring dashboard.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="styles.css">
   <title>Cleo AI — Owner Control Centre</title>
 </head>
-<body>
+<body data-mode="demo">
   <div class="ambient ambient-a"></div>
   <div class="ambient ambient-b"></div>
   <div class="scan-lines" aria-hidden="true"></div>
@@ -30,7 +30,11 @@
       </div>
 
       <div class="owner-actions">
+        <div class="environment-indicator" id="environmentIndicator" data-mode="demo" title="Demo data is currently displayed; no Cleo server is connected.">
+          <span class="pulse-dot"></span><span><b id="modeLabel">DEMO</b><small id="telemetryAge">Sample telemetry loaded now</small></span>
+        </div>
         <div class="owner-copy"><small>Good <span id="greeting">evening</span></small><strong>Owner</strong></div>
+        <button class="icon-button" id="fullscreenButton" type="button" aria-label="Enter fullscreen mode" title="Fullscreen mode"><i data-lucide="maximize"></i></button>
         <button class="icon-button" id="settingsButton" type="button" aria-label="Open settings"><i data-lucide="settings-2"></i></button>
         <div class="clock-block"><small id="dateNow">Sat 26 Apr 2025</small><strong id="clockNow">19:42</strong></div>
       </div>
@@ -47,7 +51,7 @@
           <button class="nav-item" data-section="Network" type="button"><i data-lucide="wifi"></i><span>Network</span></button>
           <button class="nav-item" data-section="Security" type="button"><i data-lucide="shield-check"></i><span>Security</span></button>
           <button class="nav-item" data-section="Maintenance" type="button"><i data-lucide="wrench"></i><span>Maintenance</span></button>
-          <button class="nav-item" data-section="Alerts" type="button"><i data-lucide="triangle-alert"></i><span>Alerts</span><b class="alert-count">2</b></button>
+          <button class="nav-item" data-section="Alerts" type="button"><i data-lucide="triangle-alert"></i><span>Alerts</span><b class="alert-count" id="alertCount">2</b></button>
           <button class="nav-item" data-section="Settings" type="button"><i data-lucide="settings"></i><span>Settings</span></button>
         </nav>
         <div class="sidebar-footer">
@@ -59,24 +63,22 @@
 
       <section class="dashboard" id="dashboard" aria-live="polite">
         <div class="section-heading">
-          <div><span class="eyebrow">LIVE OVERVIEW</span><h1 id="sectionTitle">Cleo Health Overview</h1></div>
+          <div><span class="eyebrow" id="overviewLabel">DEMO ENVIRONMENT</span><h1 id="sectionTitle">Cleo Health Overview</h1></div>
           <button class="sync-button" id="scanButton" type="button"><i data-lucide="rotate-cw"></i><span id="scanLabel">Run health check</span></button>
         </div>
 
         <section class="overview-cards" aria-label="System overview">
           <article class="panel health-card" id="healthCard">
             <div class="panel-label"><i data-lucide="activity"></i><span>System Health</span></div>
-            <div class="health-body"><span class="health-orb"><i data-lucide="check"></i></span><div><strong id="healthState">HEALTHY</strong><p id="healthCopy">All core systems operational.</p></div></div>
+            <div class="health-body"><span class="health-orb"><i data-lucide="check"></i></span><div><strong id="healthState">HEALTHY</strong><p id="healthCopy">Sample core systems are operational.</p></div></div>
           </article>
-
           <article class="panel users-card">
             <div class="panel-label"><i data-lucide="users-round"></i><span>Users</span></div>
             <div class="stat-pair"><div><strong>5</strong><span>Registered Users</span></div><div class="online-stat"><strong id="onlineCount">2</strong><span>Online Now</span></div></div>
           </article>
-
           <article class="panel uptime-card">
             <div class="panel-label"><i data-lucide="timer"></i><span>Cleo Uptime</span></div>
-            <div class="uptime-body"><span class="uptime-icon"><i data-lucide="clock-3"></i></span><div><strong>16 days 08 hours</strong><p>Since 10 Apr 2025, 11:34</p></div></div>
+            <div class="uptime-body"><span class="uptime-icon"><i data-lucide="clock-3"></i></span><div><strong id="uptimeValue">16 days 08 hours</strong><p id="uptimeSince">Sample system start: 10 Apr 2025, 11:34</p></div></div>
           </article>
         </section>
 
@@ -99,25 +101,46 @@
 
           <article class="panel cleo-card">
             <div class="cleo-visual" aria-hidden="true"><div class="hologram-ring ring-one"></div><div class="hologram-ring ring-two"></div><div class="cleo-avatar"><span class="avatar-glow"></span><span class="avatar-head"></span><span class="avatar-neck"></span><span class="avatar-hair"></span></div><div class="stars"><i></i><i></i><i></i><i></i><i></i></div></div>
-            <div class="cleo-info"><h2>Cleo AI</h2><span class="status online"><i></i>Online</span><ul><li><i data-lucide="check-circle-2"></i>Model Loaded</li><li><i data-lucide="check-circle-2"></i>Response Service Healthy</li><li><i data-lucide="check-circle-2"></i>All Systems Operational</li></ul><blockquote>“Here to help,<br>today and always.”</blockquote></div>
+            <div class="cleo-info"><h2>Cleo AI</h2><span class="status online"><i></i>Demo Ready</span><ul><li><i data-lucide="check-circle-2"></i>Model Loaded</li><li><i data-lucide="check-circle-2"></i>Response Service Healthy</li><li><i data-lucide="check-circle-2"></i>Sample systems operational</li></ul><blockquote>“Here to help,<br>today and always.”</blockquote></div>
           </article>
         </section>
 
         <section class="metrics-grid" aria-label="Hardware and service metrics">
           <article class="metric-card"><div class="metric-icon"><i data-lucide="cpu"></i></div><div><span>CPU</span><strong class="accent-green">48°C</strong><small><b>27%</b> Load</small></div><div class="meter"><i style="--level:27%"></i></div></article>
-          <article class="metric-card"><div class="metric-icon"><i data-lucide="microchip"></i></div><div><span>GPU</span><strong class="accent-green">61°C</strong><small><b>43%</b> Load</small></div><div class="meter"><i style="--level:43%"></i></div></article>
+          <button class="metric-card metric-button" data-detail="gpu" type="button" aria-label="View GPU details"><div class="metric-icon"><i data-lucide="microchip"></i></div><div><span>GPU <em>Details</em></span><strong class="accent-green">61°C</strong><small><b>43%</b> AI Load</small></div><div class="meter"><i style="--level:43%"></i></div></button>
           <article class="metric-card"><div class="metric-icon"><i data-lucide="memory-stick"></i></div><div><span>VRAM</span><strong class="accent-blue">9.2 <small>/ 16 GB</small></strong></div><div class="meter"><i style="--level:57%"></i></div></article>
           <article class="metric-card"><div class="metric-icon"><i data-lucide="memory-stick"></i></div><div><span>RAM</span><strong class="accent-blue">31 <small>/ 64 GB</small></strong></div><div class="meter"><i style="--level:48%"></i></div></article>
-          <article class="metric-card"><div class="metric-icon"><i data-lucide="hard-drive"></i></div><div><span>Storage <small>(NVMe)</small></span><strong class="accent-amber">82%</strong><small>Estimated Life Remaining</small></div><div class="meter amber"><i style="--level:70%"></i></div></article>
-          <article class="metric-card"><div class="metric-icon"><i data-lucide="database"></i></div><div><span>Storage Capacity</span><strong class="accent-blue">1.24 TB <small>free</small></strong><small>of 2.00 TB</small></div><div class="meter"><i style="--level:62%"></i></div></article>
+          <button class="metric-card metric-button" data-detail="storage" type="button" aria-label="View storage details"><div class="metric-icon"><i data-lucide="hard-drive"></i></div><div><span>Storage <small>(NVMe)</small> <em>Details</em></span><strong class="accent-amber">82%</strong><small>Estimated Life Remaining</small></div><div class="meter amber"><i style="--level:70%"></i></div></button>
+          <button class="metric-card metric-button" data-detail="storage" type="button" aria-label="View storage capacity details"><div class="metric-icon"><i data-lucide="database"></i></div><div><span>Storage Capacity <em>Details</em></span><strong class="accent-blue">1.24 TB <small>free</small></strong><small>of 2.00 TB</small></div><div class="meter"><i style="--level:62%"></i></div></button>
           <article class="metric-card"><div class="metric-icon"><i data-lucide="fan"></i></div><div><span>Cooling</span><strong class="accent-green small-strong">All Fans OK</strong><small>Average 1,240 RPM</small></div><div class="meter green"><i style="--level:48%"></i></div></article>
           <article class="metric-card"><div class="metric-icon"><i data-lucide="globe-2"></i></div><div><span>Network</span><strong class="accent-green small-strong">Connected</strong><small>↓ 12.4 Mbps&nbsp;&nbsp;↑ 4.8 Mbps</small></div><div class="meter"><i style="--level:23%"></i></div></article>
           <article class="metric-card"><div class="metric-icon"><i data-lucide="battery-charging"></i></div><div><span>Power <small>(UPS)</small></span><strong class="accent-green small-strong">Online</strong><small>Battery: 92%</small></div><div class="meter green"><i style="--level:92%"></i></div></article>
         </section>
 
+        <section class="operations-grid" aria-label="Cleo operations status">
+          <article class="panel operation-card server-card" id="serverCard">
+            <div class="panel-header"><div><span class="eyebrow">CONNECTION</span><h2>Cleo Server</h2></div><span class="mode-chip" id="serverMode">DEMO</span></div>
+            <div class="server-state"><span class="state-orb warning" id="serverStateOrb"><i data-lucide="plug-zap"></i></span><div><strong id="serverState">No live server linked</strong><p id="serverCopy">Sample telemetry only — dashboard cannot yet communicate with Cleo.</p></div></div>
+            <dl class="detail-list"><div><dt><i data-lucide="terminal-square"></i>Linux uptime</dt><dd id="linuxUptime">26 days 04 hours <small>sample</small></dd></div><div><dt><i data-lucide="network"></i>IP / network</dt><dd id="serverNetwork">192.168.1.81 · LAN <small>sample</small></dd></div><div><dt><i data-lucide="radio-tower"></i>Dashboard link</dt><dd id="serverLinkState" class="warning-text">No active connection</dd></div></dl>
+          </article>
+
+          <article class="panel operation-card workload-card">
+            <div class="panel-header"><div><span class="eyebrow">MODEL SERVICE</span><h2>Cleo AI Workload</h2></div><span class="status online"><i></i>Ready</span></div>
+            <div class="workload-score"><span><i data-lucide="brain-circuit"></i></span><div><strong id="modelName">Cleo Core v1.0</strong><p>Model loaded and standing by</p></div><b id="responseTime">42 ms</b></div>
+            <div class="workload-stats"><div><span>Requests running</span><strong id="requestCount">0</strong></div><div><span>Users using Cleo</span><strong id="activeCleoUsers">0</strong></div><div><span>Response time (p95)</span><strong id="responseP95">42 ms</strong></div></div>
+          </article>
+
+          <article class="panel operation-card security-card">
+            <div class="panel-header"><div><span class="eyebrow">PROTECTION</span><h2>Security</h2></div><button class="text-button" id="securityToggle" type="button">View report <i data-lucide="chevron-right"></i></button></div>
+            <div class="security-summary"><span class="shield-orb"><i data-lucide="shield-check"></i></span><div><strong>Firewall active</strong><p>Last security scan <span id="securityScanAge">2 minutes ago</span></p></div></div>
+            <div class="security-counts"><div><span>Failed sign-ins</span><strong>0</strong></div><div><span>Blocked connections</span><strong>3 <small>/ 24h</small></strong></div></div>
+            <div class="security-report" id="securityReport" hidden><p><i data-lucide="check-circle-2"></i> No privileged-access changes detected.</p><p><i data-lucide="check-circle-2"></i> Firewall policy loaded successfully.</p></div>
+          </article>
+        </section>
+
         <section class="bottom-grid">
           <article class="panel maintenance-panel">
-            <div class="panel-header"><div><span class="eyebrow">SCHEDULED CARE</span><h2>Maintenance</h2></div><span class="header-note">Service Estimate</span></div>
+            <div class="panel-header"><div><span class="eyebrow">SCHEDULED CARE</span><h2>Maintenance</h2></div><button class="text-button" id="recordMaintenance" type="button">Record service <i data-lucide="plus"></i></button></div>
             <div class="maintenance-list">
               <div><span class="service-icon"><i data-lucide="fan"></i></span><strong>CPU Cooling</strong><span class="status online"><i></i>OK</span><small>—</small></div>
               <div><span class="service-icon"><i data-lucide="monitor-cog"></i></span><strong>GPU</strong><span class="status online"><i></i>OK</span><small>—</small></div>
@@ -125,13 +148,14 @@
               <div><span class="service-icon warning"><i data-lucide="battery-medium"></i></span><strong>UPS Battery</strong><span class="status warning"><i></i>Test within 30 days</span><small>Within 30 days</small></div>
               <div><span class="service-icon critical"><i data-lucide="fan"></i></span><strong>Case Fan #3</strong><span class="status critical"><i></i>RPM below expected range</span><small>Replace soon</small></div>
             </div>
+            <div class="maintenance-history" id="maintenanceHistory" aria-live="polite"></div>
           </article>
 
           <article class="panel alerts-panel">
             <div class="panel-header"><div><span class="eyebrow">SYSTEM FEED</span><h2>Recent Alerts</h2></div><button class="text-button" id="alertsToggle" type="button">View All <i data-lucide="chevron-right"></i></button></div>
             <div class="alerts-list" id="alertsList">
-              <div class="alert-row priority"><span><i data-lucide="siren"></i></span><p>Case Fan #3 RPM below expected range</p><time>Today 14:32</time></div>
-              <div class="alert-row warning"><span><i data-lucide="triangle-alert"></i></span><p>NVMe SSD wear at 82%</p><time>Today 10:11</time></div>
+              <div class="alert-row priority" data-alert-id="case-fan"><span><i data-lucide="siren"></i></span><p>Case Fan #3 RPM below expected range</p><time>Today 14:32</time><button class="ack-button" type="button">Acknowledge</button></div>
+              <div class="alert-row warning" data-alert-id="ssd-wear"><span><i data-lucide="triangle-alert"></i></span><p>NVMe SSD wear at 82%</p><time>Today 10:11</time><button class="ack-button" type="button">Acknowledge</button></div>
               <div class="alert-row info"><span><i data-lucide="user-check"></i></span><p>User login (James Carter)</p><time>Today 09:03</time></div>
               <div class="alert-row info"><span><i data-lucide="info"></i></span><p>System health check completed</p><time>Today 02:00</time></div>
               <div class="alert-row info hidden-alert"><span><i data-lucide="brain-circuit"></i></span><p>Cleo AI model reloaded (routine)</p><time>Yesterday 23:15</time></div>
@@ -144,6 +168,14 @@
       </section>
     </div>
   </main>
+
+  <dialog class="modal detail-dialog" id="hardwareDialog" aria-labelledby="hardwareDialogTitle">
+    <div class="modal-card"><div class="modal-heading"><div><span class="eyebrow">DEMO HARDWARE TELEMETRY</span><h2 id="hardwareDialogTitle">Hardware details</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div><div id="hardwareDetailContent"></div><p class="modal-note"><i data-lucide="info"></i> Values are sample telemetry until a Cleo Server health endpoint is configured.</p></div>
+  </dialog>
+
+  <dialog class="modal service-dialog" id="maintenanceDialog" aria-labelledby="maintenanceDialogTitle">
+    <form class="modal-card" id="maintenanceForm"><div class="modal-heading"><div><span class="eyebrow">MAINTENANCE HISTORY</span><h2 id="maintenanceDialogTitle">Record service</h2></div><button class="icon-button close-modal" type="button" aria-label="Close"><i data-lucide="x"></i></button></div><label>Component<select id="serviceComponent" required><option>Case Fan #3</option><option>NVMe SSD</option><option>UPS Battery</option><option>CPU Cooling</option><option>GPU</option><option>Other</option></select></label><label>Service / replacement date<input id="serviceDate" type="date" required></label><label>Notes<textarea id="serviceNotes" maxlength="160" placeholder="e.g. Replaced with 140 mm PWM fan"></textarea></label><div class="modal-actions"><button class="secondary-button close-modal" type="button">Cancel</button><button class="primary-button" type="submit">Save to history</button></div></form>
+  </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
